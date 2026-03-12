@@ -12,8 +12,139 @@
 const http = require('http');
 const url  = require('url');
 const crypto = require('crypto');
+const Redis = require('ioredis');
 
 const PORT = process.env.PORT || 3000;
+
+// ═══════════════════════════════════════════════════════════════
+//  REDIS CONNECTION
+// ═══════════════════════════════════════════════════════════════
+// Connection options (set via environment variables):
+//   REDIS_URL   — full connection string, e.g. redis://:password@host:6379/0
+//   REDIS_HOST  — hostname (default: 127.0.0.1)
+//   REDIS_PORT  — port (default: 6379)
+//   REDIS_PASSWORD — auth password (default: none)
+//   REDIS_DB    — database index (default: 0)
+//
+// For managed Redis (AWS ElastiCache, Redis Cloud, Upstash, etc.)
+// use REDIS_URL with the full connection string they provide.
+const redis = new Redis(process.env.REDIS_URL || {
+  host:     process.env.REDIS_HOST || '127.0.0.1',
+  port:     parseInt(process.env.REDIS_PORT || '6379', 10),
+  password: process.env.REDIS_PASSWORD || undefined,
+  db:       parseInt(process.env.REDIS_DB || '0', 10),
+  maxRetriesPerRequest: 3,
+  retryStrategy: (times) => Math.min(times * 200, 3000),
+});
+
+redis.on('connect', () => console.log('✅ Redis connected'));
+redis.on('error', (err) => console.error('❌ Redis error:', err.message));
+
+// ═══════════════════════════════════════════════════════════════
+//  GCLID & IP RATE-LIMIT CONFIGURATION
+// ═══════════════════════════════════════════════════════════════
+// Key prefixes in Redis:
+//   gclid:{value}       → stores "1" with TTL; presence = already used
+//   ip_gclids:{ip}      → Redis sorted set of gclid timestamps
+//
+// Tunable constants:
+const GCLID_TTL_DAYS          = 90;  // how long a used gclid is remembered
+const IP_RATE_WINDOW_HOURS    = 24;  // sliding window for IP rate limit
+const IP_RATE_MAX_GCLIDS      = 5;   // max unique gclids per IP in window
+
+/**
+ * Checks if a GCLID has been used before.
+ * Returns { allowed: boolean, reason: string }.
+ */
+async function checkGCLID(gclid) {
+  if (!gclid || typeof gclid !== 'string' || gclid.trim() === '') {
+    return { allowed: false, reason: 'Missing or empty gclid' };
+  }
+
+  // Basic format sanity: real GCLIDs are typically 50-150 chars, URL-safe base64
+  // They usually start with "Cj" or "EAIaIQ" but this varies, so we just check length/charset
+  if (gclid.length < 20 || gclid.length > 500) {
+    return { allowed: false, reason: `gclid length suspicious (${gclid.length} chars)` };
+  }
+  if (!/^[A-Za-z0-9_\-]+$/.test(gclid)) {
+    return { allowed: false, reason: 'gclid contains invalid characters' };
+  }
+
+  const key = `gclid:${gclid}`;
+  try {
+    const exists = await redis.exists(key);
+    if (exists) {
+      return { allowed: false, reason: 'gclid already used' };
+    }
+    return { allowed: true, reason: 'gclid is new' };
+  } catch (err) {
+    // Redis down → fail-open (don't block real users if Redis is temporarily unavailable)
+    console.error('[Redis] GCLID check failed:', err.message);
+    return { allowed: true, reason: 'Redis unavailable — fail-open' };
+  }
+}
+
+/**
+ * Marks a GCLID as used and records it against the IP.
+ * Called only AFTER all verification passes.
+ */
+async function recordVerifiedVisit(gclid, ip) {
+  const now = Date.now();
+  try {
+    const pipeline = redis.pipeline();
+
+    // 1. Mark gclid as used (with TTL)
+    pipeline.set(`gclid:${gclid}`, JSON.stringify({ ip, ts: now }), 'EX', GCLID_TTL_DAYS * 86400);
+
+    // 2. Add gclid to the IP's sorted set (score = timestamp)
+    const ipKey = `ip_gclids:${ip}`;
+    pipeline.zadd(ipKey, now, gclid);
+
+    // 3. Prune entries older than the rate window from the sorted set
+    const windowStart = now - (IP_RATE_WINDOW_HOURS * 3600 * 1000);
+    pipeline.zremrangebyscore(ipKey, 0, windowStart);
+
+    // 4. Set TTL on the IP key so it auto-expires if inactive
+    pipeline.expire(ipKey, IP_RATE_WINDOW_HOURS * 3600 + 3600); // window + 1h buffer
+
+    await pipeline.exec();
+  } catch (err) {
+    console.error('[Redis] Record visit failed:', err.message);
+    // Non-fatal — the verification already passed
+  }
+}
+
+/**
+ * Checks if an IP has exceeded the rate limit for unique gclids.
+ * Returns { allowed: boolean, count: number, reason: string }.
+ */
+async function checkIPRate(ip) {
+  const ipKey = `ip_gclids:${ip}`;
+  const now = Date.now();
+  const windowStart = now - (IP_RATE_WINDOW_HOURS * 3600 * 1000);
+
+  try {
+    // Clean old entries first, then count remaining
+    await redis.zremrangebyscore(ipKey, 0, windowStart);
+    const count = await redis.zcard(ipKey);
+
+    if (count >= IP_RATE_MAX_GCLIDS) {
+      return {
+        allowed: false,
+        count,
+        reason: `IP has used ${count} gclids in the last ${IP_RATE_WINDOW_HOURS}h (limit: ${IP_RATE_MAX_GCLIDS})`,
+      };
+    }
+    return {
+      allowed: true,
+      count,
+      reason: `IP has used ${count}/${IP_RATE_MAX_GCLIDS} gclids in window`,
+    };
+  } catch (err) {
+    console.error('[Redis] IP rate check failed:', err.message);
+    return { allowed: true, count: -1, reason: 'Redis unavailable — fail-open' };
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════
 //  ALLOWED ORIGINS — only these domains can call /verify
@@ -687,18 +818,47 @@ const server = http.createServer(async (req, res) => {
     req.on('data', chunk => (body += chunk));
     req.on('end', async () => {
       try {
-        const { fingerprint, source, ts: clientTs } = JSON.parse(body);
-        const clientIP = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        const { fingerprint, gclid, source, ts: clientTs } = JSON.parse(body);
+        const clientIP = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').replace(/^::ffff:/, '');
 
         console.log('\n══════════════════════════════════════════════');
         console.log(`[${new Date().toISOString()}] Verification request from ${clientIP}`);
         console.log(`  Source: ${source}  |  Client TS: ${clientTs}`);
+        console.log(`  GCLID: ${gclid ? gclid.slice(0, 20) + '…' : '(none)'}`);
 
-        // ── IP Intelligence check ─────────────────────────────
+        // ── 1. GCLID presence & format check ──────────────────
+        const gclidResult = await checkGCLID(gclid);
+        console.log(`  GCLID check: ${gclidResult.allowed ? '✓' : '✗'} ${gclidResult.reason}`);
+
+        if (!gclidResult.allowed) {
+          console.log(`  ❌ REJECTED — ${gclidResult.reason}`);
+          console.log('══════════════════════════════════════════════\n');
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({
+            verified: false,
+            reason: `GCLID rejected: ${gclidResult.reason}`,
+          }));
+        }
+
+        // ── 2. IP rate limit (too many gclids from same IP?) ──
+        const ipRateResult = await checkIPRate(clientIP);
+        console.log(`  IP rate: ${ipRateResult.allowed ? '✓' : '✗'} ${ipRateResult.reason}`);
+
+        if (!ipRateResult.allowed) {
+          console.log(`  ❌ REJECTED — ${ipRateResult.reason}`);
+          console.log('══════════════════════════════════════════════\n');
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({
+            verified: false,
+            reason: `IP rate limit: ${ipRateResult.reason}`,
+          }));
+        }
+
+        // ── 3. IP Intelligence (datacenter / VPN / Tor) ───────
         const ipData = await lookupIP(clientIP);
         const ipResult = evaluateIP(ipData);
 
-        console.log(`  IP check: ${ipResult.pass ? '✓' : '✗'} ${ipResult.reason}`);
+        console.log(`  IP intel: ${ipResult.pass ? '✓' : '✗'} ${ipResult.reason}`);
         if (ipResult.countryCode) {
           console.log(`  IP country: ${ipResult.countryCode}`);
         }
@@ -713,17 +873,23 @@ const server = http.createServer(async (req, res) => {
           }));
         }
 
-        // ── Fingerprint verification ──────────────────────────
+        // ── 4. Fingerprint verification ───────────────────────
         const result = verify(fingerprint, clientIP);
 
-        console.log(`  Result: ${result.verified ? '✅ VERIFIED' : '❌ REJECTED'} (score: ${result.score ?? 'N/A'})`);
+        console.log(`  FP result: ${result.verified ? '✅ VERIFIED' : '❌ REJECTED'} (score: ${result.score ?? 'N/A'})`);
         if (!result.verified) {
           console.log(`  Reason: ${result.reason}`);
         }
-        // Log all checks
         for (const c of result.checks) {
           console.log(`    ${c.pass ? '✓' : '✗'} ${c.name}: ${c.reason}`);
         }
+
+        // ── 5. If all passed → record visit & return code ─────
+        if (result.verified) {
+          await recordVerifiedVisit(gclid, clientIP);
+          console.log(`  📝 Recorded gclid + IP in Redis`);
+        }
+
         console.log('══════════════════════════════════════════════\n');
 
         const response = {
@@ -764,5 +930,8 @@ server.listen(PORT, () => {
   for (const o of ALLOWED_ORIGINS) console.log(`     • ${o}`);
   console.log(`\n   IP Intelligence (ipapi.is):`);
   console.log(`     API key: ${IPAPI_KEY ? '✓ configured (' + IPAPI_KEY.slice(0, 6) + '…)' : '✗ not set (free tier — 1,000/day)'}`);
+  console.log(`\n   GCLID & Rate Limiting (Redis):`);
+  console.log(`     GCLID TTL: ${GCLID_TTL_DAYS} days`);
+  console.log(`     IP rate limit: ${IP_RATE_MAX_GCLIDS} gclids per ${IP_RATE_WINDOW_HOURS}h`);
   console.log('');
 });
