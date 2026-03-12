@@ -423,6 +423,230 @@ function verify(fp, ip) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  IP INTELLIGENCE — datacenter / VPN / Tor / proxy detection
+// ═══════════════════════════════════════════════════════════════
+// Uses ipapi.is (paid subscription).
+// Docs: https://ipapi.is/developers.html
+//
+// Authentication: pass your API key via the `key` query parameter.
+// The API returns fields like:
+//   is_datacenter, is_vpn, is_tor, is_proxy, is_abuser,
+//   location.country_code, datacenter.name, company.type, etc.
+//
+// ┌─────────────────────────────────────────────────────────────┐
+// │  HOW TO SET YOUR API KEY                                    │
+// │                                                             │
+// │  Option 1 (recommended) — environment variable:             │
+// │    IPAPI_KEY=your_key_here node server.js                   │
+// │                                                             │
+// │  Option 2 — .env file (if using dotenv):                    │
+// │    IPAPI_KEY=your_key_here                                  │
+// │                                                             │
+// │  Option 3 — hardcode below (not recommended for production):│
+// │    const IPAPI_KEY = 'your_key_here';                       │
+// │                                                             │
+// │  Get your key from: https://ipapi.is/app/ (dashboard)       │
+// └─────────────────────────────────────────────────────────────┘
+const IPAPI_KEY = process.env.IPAPI_KEY || '';
+
+if (!IPAPI_KEY) {
+  console.warn(
+    '⚠️  WARNING: IPAPI_KEY is not set.\n' +
+    '   IP lookups will use the free tier (1,000/day).\n' +
+    '   Set it via:  IPAPI_KEY=your_key node server.js\n'
+  );
+}
+
+/**
+ * Queries ipapi.is for threat intelligence on the given IP.
+ * Attaches the API key for authenticated (paid) access.
+ * Returns the parsed JSON response, or null on failure.
+ */
+function lookupIP(ip) {
+  return new Promise((resolve) => {
+    // Strip IPv6 prefix from IPv4-mapped addresses (e.g. ::ffff:127.0.0.1 → 127.0.0.1)
+    const cleanIP = ip.replace(/^::ffff:/, '');
+
+    // Skip lookups for localhost / private ranges
+    if (cleanIP === '127.0.0.1' || cleanIP === '::1' || cleanIP.startsWith('192.168.') || cleanIP.startsWith('10.')) {
+      resolve({
+        _skipped: true,
+        _reason: `Private/loopback IP (${cleanIP}) — skipping external lookup`,
+      });
+      return;
+    }
+
+    // Build query string — always include `q`, add `key` if available
+    const params = new URLSearchParams({ q: cleanIP });
+    if (IPAPI_KEY) {
+      params.set('key', IPAPI_KEY);
+    }
+
+    const options = {
+      hostname: 'api.ipapi.is',
+      path: `/?${params.toString()}`,
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      timeout: 4000,
+    };
+
+    const apiReq = require('https').request(options, (apiRes) => {
+      let data = '';
+      apiRes.on('data', chunk => (data += chunk));
+      apiRes.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+
+          // ipapi.is returns { error: "..." } on failures (still HTTP 200)
+          if (parsed.error) {
+            console.warn(`  [ipapi.is] API error: ${parsed.error}`);
+            resolve(null);
+            return;
+          }
+
+          resolve(parsed);
+        } catch (_) {
+          resolve(null);
+        }
+      });
+    });
+
+    apiReq.on('error', () => resolve(null));
+    apiReq.on('timeout', () => { apiReq.destroy(); resolve(null); });
+    apiReq.end();
+  });
+}
+
+/**
+ * Evaluates the IP intelligence response against the real ipapi.is schema.
+ *
+ * Verified field paths (from actual API response for 103.125.216.71):
+ *   ipData.is_datacenter         → boolean
+ *   ipData.is_vpn                → boolean
+ *   ipData.is_tor                → boolean
+ *   ipData.is_proxy              → boolean
+ *   ipData.is_abuser             → boolean
+ *   ipData.is_crawler            → boolean
+ *   ipData.is_mobile             → boolean
+ *   ipData.is_satellite          → boolean
+ *   ipData.datacenter.datacenter → string  (provider name, e.g. "Kamatera, Inc.")
+ *   ipData.datacenter.domain     → string  (e.g. "kamatera.com")
+ *   ipData.datacenter.network    → string  (e.g. "103.125.216.0 - 103.125.219.255")
+ *   ipData.company.name          → string
+ *   ipData.company.type          → string  ("hosting" | "isp" | "business" | "education" | "government" | "banking")
+ *   ipData.company.abuser_score  → string  (e.g. "0.0469 (High)")
+ *   ipData.asn.type              → string  ("hosting" | "isp" | etc.)
+ *   ipData.asn.abuser_score      → string  (e.g. "0.0261 (Elevated)")
+ *   ipData.location.country_code → string  (e.g. "JP")
+ *   ipData.location.country      → string  (e.g. "Japan")
+ *
+ * Returns { pass, reason, flags, countryCode, ipData }.
+ */
+function evaluateIP(ipData) {
+  // If lookup was skipped (localhost/private) → pass with note
+  if (ipData?._skipped) {
+    return {
+      pass: true,
+      reason: ipData._reason,
+      flags: [],
+      ipData,
+    };
+  }
+
+  // If lookup failed entirely → soft-pass (don't block on API failure)
+  if (!ipData) {
+    return {
+      pass: true,
+      reason: 'IP lookup failed — allowing request (fail-open)',
+      flags: ['lookup_failed'],
+      ipData: null,
+    };
+  }
+
+  const flags = [];
+
+  // ── Datacenter / Hosting ──────────────────────────────────
+  // Real path: datacenter.datacenter = "Kamatera, Inc."
+  // Real path: datacenter.domain    = "kamatera.com"
+  if (ipData.is_datacenter === true) {
+    const dcName = ipData.datacenter?.datacenter || 'unknown provider';
+    const dcDomain = ipData.datacenter?.domain || '';
+    flags.push(`datacenter:${dcName}${dcDomain ? ` (${dcDomain})` : ''}`);
+  }
+
+  // ── VPN ────────────────────────────────────────────────────
+  if (ipData.is_vpn === true) {
+    const vpnName = ipData.vpn?.name || 'unknown';
+    flags.push(`vpn:${vpnName}`);
+  }
+
+  // ── Tor ────────────────────────────────────────────────────
+  if (ipData.is_tor === true) {
+    flags.push('tor_exit_node');
+  }
+
+  // ── Proxy ──────────────────────────────────────────────────
+  if (ipData.is_proxy === true) {
+    flags.push('proxy');
+  }
+
+  // ── Known abuser ──────────────────────────────────────────
+  if (ipData.is_abuser === true) {
+    flags.push('known_abuser');
+  }
+
+  // ── Crawler ───────────────────────────────────────────────
+  if (ipData.is_crawler === true) {
+    flags.push('crawler');
+  }
+
+  // ── Satellite provider ────────────────────────────────────
+  if (ipData.is_satellite === true) {
+    flags.push('satellite');
+  }
+
+  // ── Company type = hosting ────────────────────────────────
+  // Catches cases where is_datacenter is false but the owning
+  // organisation is classified as hosting.
+  // Real path: company.type = "hosting"
+  const companyType = (ipData.company?.type || '').toLowerCase();
+  if (companyType === 'hosting' && !flags.some(f => f.startsWith('datacenter'))) {
+    flags.push(`company_type_hosting:${ipData.company?.name || 'unknown'}`);
+  }
+
+  // ── ASN type = hosting (secondary signal) ─────────────────
+  // Real path: asn.type = "hosting"
+  const asnType = (ipData.asn?.type || '').toLowerCase();
+  if (asnType === 'hosting' && !flags.some(f => f.startsWith('datacenter') || f.startsWith('company_type'))) {
+    flags.push(`asn_type_hosting:${ipData.asn?.org || 'unknown'}`);
+  }
+
+  // ── High abuser score ─────────────────────────────────────
+  // Real path: company.abuser_score = "0.0469 (High)"
+  // Parse the leading float; flag if ≥ 0.5
+  const abuserStr = ipData.company?.abuser_score || ipData.asn?.abuser_score || '';
+  const abuserNum = parseFloat(abuserStr);
+  if (!isNaN(abuserNum) && abuserNum >= 0.5) {
+    flags.push(`high_abuser_score:${abuserStr}`);
+  }
+
+  // ── Country code (secondary Japan geo-signal) ─────────────
+  // Real path: location.country_code = "JP"
+  const countryCode = (ipData.location?.country_code || '').toUpperCase();
+
+  const pass = flags.length === 0;
+  return {
+    pass,
+    reason: pass
+      ? `Residential IP — country: ${countryCode || 'unknown'}, company: ${ipData.company?.name || 'N/A'} (${ipData.company?.type || 'unknown'})`
+      : `Non-residential IP — ${flags.join(', ')}`,
+    flags,
+    countryCode,
+    ipData,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  HTTP SERVER
 // ═══════════════════════════════════════════════════════════════
 
@@ -461,7 +685,7 @@ const server = http.createServer(async (req, res) => {
 
     let body = '';
     req.on('data', chunk => (body += chunk));
-    req.on('end', () => {
+    req.on('end', async () => {
       try {
         const { fingerprint, source, ts: clientTs } = JSON.parse(body);
         const clientIP = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -470,6 +694,26 @@ const server = http.createServer(async (req, res) => {
         console.log(`[${new Date().toISOString()}] Verification request from ${clientIP}`);
         console.log(`  Source: ${source}  |  Client TS: ${clientTs}`);
 
+        // ── IP Intelligence check ─────────────────────────────
+        const ipData = await lookupIP(clientIP);
+        const ipResult = evaluateIP(ipData);
+
+        console.log(`  IP check: ${ipResult.pass ? '✓' : '✗'} ${ipResult.reason}`);
+        if (ipResult.countryCode) {
+          console.log(`  IP country: ${ipResult.countryCode}`);
+        }
+
+        if (!ipResult.pass) {
+          console.log(`  ❌ REJECTED at IP level — ${ipResult.reason}`);
+          console.log('══════════════════════════════════════════════\n');
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({
+            verified: false,
+            reason: `IP rejected: ${ipResult.reason}`,
+          }));
+        }
+
+        // ── Fingerprint verification ──────────────────────────
         const result = verify(fingerprint, clientIP);
 
         console.log(`  Result: ${result.verified ? '✅ VERIFIED' : '❌ REJECTED'} (score: ${result.score ?? 'N/A'})`);
@@ -518,5 +762,7 @@ server.listen(PORT, () => {
   console.log(`   GET  /health  — health check`);
   console.log(`\n   Allowed origins:`);
   for (const o of ALLOWED_ORIGINS) console.log(`     • ${o}`);
+  console.log(`\n   IP Intelligence (ipapi.is):`);
+  console.log(`     API key: ${IPAPI_KEY ? '✓ configured (' + IPAPI_KEY.slice(0, 6) + '…)' : '✗ not set (free tier — 1,000/day)'}`);
   console.log('');
 });
