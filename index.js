@@ -179,12 +179,7 @@ async function checkIPRate(ip) {
 // Add every origin (scheme + host + port) that embeds bot-shield.js.
 // Requests from any other origin will be rejected with 403.
 const ALLOWED_ORIGINS = [
-  'http://localhost:8080',
-  'http://localhost:3000',
-  'http://127.0.0.1:8080',
-  // Add your production domains here, e.g.:
-  // 'https://www.example.com',
-  // 'https://app.example.com',
+  "https://kazuonsen.com/",
 ];
 
 /**
