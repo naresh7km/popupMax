@@ -1,0 +1,16 @@
+{
+  "name": "botshield-backend",
+  "version": "1.0.0",
+  "description": "BotShield verification server — bot detection with device fingerprinting, IP intelligence, and GCLID tracking",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "ioredis": "^5.4.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
