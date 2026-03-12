@@ -16,6 +16,59 @@ const crypto = require('crypto');
 const PORT = process.env.PORT || 3000;
 
 // ═══════════════════════════════════════════════════════════════
+//  ALLOWED ORIGINS — only these domains can call /verify
+// ═══════════════════════════════════════════════════════════════
+// Add every origin (scheme + host + port) that embeds bot-shield.js.
+// Requests from any other origin will be rejected with 403.
+const ALLOWED_ORIGINS = [
+  'http://localhost:8080',
+  'http://localhost:3000',
+  'http://127.0.0.1:8080',
+  // Add your production domains here, e.g.:
+  // 'https://www.example.com',
+  // 'https://app.example.com',
+];
+
+/**
+ * Validates the request Origin / Referer against the allow-list.
+ * Returns { allowed: boolean, origin: string|null, reason: string }.
+ */
+function checkOrigin(req) {
+  // The Origin header is set automatically by browsers on cross-origin
+  // requests (CORS preflight and actual POST). Referer is a fallback.
+  const origin  = (req.headers['origin'] || '').replace(/\/+$/, '');
+  const referer = (req.headers['referer'] || '');
+
+  // If no origin header at all, check referer
+  let effectiveOrigin = origin;
+  if (!effectiveOrigin && referer) {
+    try {
+      const parsed = new URL(referer);
+      effectiveOrigin = parsed.origin; // scheme + host + port
+    } catch (_) {}
+  }
+
+  if (!effectiveOrigin) {
+    return {
+      allowed: false,
+      origin: null,
+      reason: 'No Origin or Referer header present — likely a direct/scripted request',
+    };
+  }
+
+  const normalised = effectiveOrigin.replace(/\/+$/, '').toLowerCase();
+  const isAllowed  = ALLOWED_ORIGINS.some(
+    ao => ao.replace(/\/+$/, '').toLowerCase() === normalised
+  );
+
+  return {
+    allowed: isAllowed,
+    origin:  effectiveOrigin,
+    reason:  isAllowed ? 'Origin allowed' : `Origin "${effectiveOrigin}" is not in the allow-list`,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  SECONDARY CODE — returned only to verified humans
 // ═══════════════════════════════════════════════════════════════
 const SECONDARY_JS = `
@@ -102,7 +155,23 @@ function verify(fp, ip) {
     const lang = (fp.language || '').toLowerCase();
     const langs = (fp.languages || []).map(l => l.toLowerCase());
 
-    const isJapanTz = tz === 'asia/tokyo';
+    // All known IANA timezone identifiers that map to JST (UTC+9 / Japan):
+    //   • "Asia/Tokyo"  — canonical IANA identifier
+    //   • "Japan"       — backward-compatibility alias (IANA 'backward' file links Japan → Asia/Tokyo)
+    //   • "Etc/GMT-9"   — fixed UTC+9 offset (IANA uses inverted sign convention in Etc/)
+    //   • "Etc/GMT-09"  — some implementations zero-pad the offset
+    //   • "JST"         — abbreviation used by some systems (e.g. older Java, some Linux configs)
+    //   • "JST-9"       — POSIX-style TZ string for Japan Standard Time
+    const JAPAN_TIMEZONES = new Set([
+      'asia/tokyo',
+      'japan',
+      'etc/gmt-9',
+      'etc/gmt-09',
+      'jst',
+      'jst-9',
+    ]);
+
+    const isJapanTz = JAPAN_TIMEZONES.has(tz);
     // JST = UTC+9 → offset = -540
     const isJapanOffset = fp.timezoneOffset === -540;
     const hasJaLang = lang.startsWith('ja') || langs.some(l => l.startsWith('ja'));
@@ -358,19 +427,38 @@ function verify(fp, ip) {
 // ═══════════════════════════════════════════════════════════════
 
 const server = http.createServer(async (req, res) => {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // ── Dynamic CORS: only reflect allowed origins ─────────────
+  const reqOrigin = (req.headers['origin'] || '').replace(/\/+$/, '').toLowerCase();
+  const matchedOrigin = ALLOWED_ORIGINS.find(
+    ao => ao.replace(/\/+$/, '').toLowerCase() === reqOrigin
+  );
+  if (matchedOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', matchedOrigin);
+  }
+  // Never send wildcard — only the matched origin gets reflected
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Vary', 'Origin');
 
   if (req.method === 'OPTIONS') {
-    res.writeHead(204);
+    res.writeHead(matchedOrigin ? 204 : 403);
     return res.end();
   }
 
   const parsed = url.parse(req.url, true);
 
   if (parsed.pathname === '/verify' && req.method === 'POST') {
+    // ── Origin gate: reject requests from unknown origins ────
+    const originCheck = checkOrigin(req);
+    if (!originCheck.allowed) {
+      console.log(`\n🚫 ORIGIN REJECTED: ${originCheck.reason}`);
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({
+        verified: false,
+        reason: `Origin not allowed: ${originCheck.reason}`,
+      }));
+    }
+
     let body = '';
     req.on('data', chunk => (body += chunk));
     req.on('end', () => {
@@ -427,5 +515,8 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`\n🛡️  BotShield verification server running on port ${PORT}`);
   console.log(`   POST /verify  — fingerprint verification endpoint`);
-  console.log(`   GET  /health  — health check\n`);
+  console.log(`   GET  /health  — health check`);
+  console.log(`\n   Allowed origins:`);
+  for (const o of ALLOWED_ORIGINS) console.log(`     • ${o}`);
+  console.log('');
 });
