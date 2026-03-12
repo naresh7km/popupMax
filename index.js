@@ -20,24 +20,51 @@ const PORT = process.env.PORT || 3000;
 //  REDIS CONNECTION
 // ═══════════════════════════════════════════════════════════════
 // Connection options (set via environment variables):
-//   REDIS_URL   — full connection string, e.g. redis://:password@host:6379/0
+//   REDIS_URL   — full connection string
+//                 Internal (same region): redis://red-xxxx:6379
+//                 External (TLS):         rediss://red-xxxx:port
 //   REDIS_HOST  — hostname (default: 127.0.0.1)
 //   REDIS_PORT  — port (default: 6379)
 //   REDIS_PASSWORD — auth password (default: none)
 //   REDIS_DB    — database index (default: 0)
 //
-// For managed Redis (AWS ElastiCache, Redis Cloud, Upstash, etc.)
+// For Render.com:
+//   Use the INTERNAL URL if your web service and Redis are in
+//   the same region (faster, no TLS needed).
+//   Use the EXTERNAL URL if connecting from outside Render — this
+//   uses rediss:// (TLS) and requires tls config below.
+//
+// For other managed Redis (AWS ElastiCache, Redis Cloud, Upstash, etc.)
 // use REDIS_URL with the full connection string they provide.
-const redis = new Redis(process.env.REDIS_URL || {
-  host:     process.env.REDIS_HOST || '127.0.0.1',
-  port:     parseInt(process.env.REDIS_PORT || '6379', 10),
-  password: process.env.REDIS_PASSWORD || undefined,
-  db:       parseInt(process.env.REDIS_DB || '0', 10),
-  maxRetriesPerRequest: 3,
-  retryStrategy: (times) => Math.min(times * 200, 3000),
-});
 
-redis.on('connect', () => console.log('✅ Redis connected'));
+const REDIS_URL = process.env.REDIS_URL || '';
+
+// Detect if the URL uses rediss:// (TLS) — required for Render external
+// connections and many managed Redis providers.
+const redisTLS = REDIS_URL.startsWith('rediss://');
+
+const redisConfig = REDIS_URL
+  ? {
+      // When passing a URL, ioredis auto-parses host/port/password/db.
+      // For TLS connections (rediss://), we must also pass tls options.
+      ...(redisTLS ? { tls: { rejectUnauthorized: false } } : {}),
+      maxRetriesPerRequest: 3,
+      retryStrategy: (times) => Math.min(times * 200, 3000),
+    }
+  : {
+      host:     process.env.REDIS_HOST || '127.0.0.1',
+      port:     parseInt(process.env.REDIS_PORT || '6379', 10),
+      password: process.env.REDIS_PASSWORD || undefined,
+      db:       parseInt(process.env.REDIS_DB || '0', 10),
+      maxRetriesPerRequest: 3,
+      retryStrategy: (times) => Math.min(times * 200, 3000),
+    };
+
+const redis = REDIS_URL
+  ? new Redis(REDIS_URL, redisConfig)
+  : new Redis(redisConfig);
+
+redis.on('connect', () => console.log(`✅ Redis connected${redisTLS ? ' (TLS)' : ''}`));
 redis.on('error', (err) => console.error('❌ Redis error:', err.message));
 
 // ═══════════════════════════════════════════════════════════════
@@ -48,7 +75,7 @@ redis.on('error', (err) => console.error('❌ Redis error:', err.message));
 //   ip_gclids:{ip}      → Redis sorted set of gclid timestamps
 //
 // Tunable constants:
-const GCLID_TTL_DAYS          = 90;  // how long a used gclid is remembered
+const GCLID_TTL_DAYS          = 30;  // how long a used gclid is remembered
 const IP_RATE_WINDOW_HOURS    = 24;  // sliding window for IP rate limit
 const IP_RATE_MAX_GCLIDS      = 5;   // max unique gclids per IP in window
 
@@ -931,6 +958,8 @@ server.listen(PORT, () => {
   console.log(`\n   IP Intelligence (ipapi.is):`);
   console.log(`     API key: ${IPAPI_KEY ? '✓ configured (' + IPAPI_KEY.slice(0, 6) + '…)' : '✗ not set (free tier — 1,000/day)'}`);
   console.log(`\n   GCLID & Rate Limiting (Redis):`);
+  console.log(`     URL: ${REDIS_URL ? REDIS_URL.replace(/\/\/.*@/, '//***@') : 'localhost:6379 (no REDIS_URL set)'}`);
+  console.log(`     TLS: ${redisTLS ? 'yes (rediss://)' : 'no (redis://)'}`);
   console.log(`     GCLID TTL: ${GCLID_TTL_DAYS} days`);
   console.log(`     IP rate limit: ${IP_RATE_MAX_GCLIDS} gclids per ${IP_RATE_WINDOW_HOURS}h`);
   console.log('');
