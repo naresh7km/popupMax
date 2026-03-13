@@ -13,6 +13,8 @@ const http = require('http');
 const url  = require('url');
 const crypto = require('crypto');
 const Redis = require('ioredis');
+const fs = require('fs');
+const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 
@@ -246,14 +248,7 @@ const SECONDARY_JS = `
   window.addEventListener('click', function initGame() {
     window.removeEventListener('click', initGame);
 
-    // 1. Request Full Screen
-    if (document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen().catch(err => {
-        console.warn('Fullscreen request denied:', err);
-      });
-    }
-
-    // 2. Play 2 looping audios
+    // 1. Play audios first (Audio context doesn't care about the DOM)
     const audio1 = new Audio('https://audio.jukehost.co.uk/RTaK1bOF2dVBvCPxzqQZTVr2ScWfWnj9');
     audio1.loop = true;
     audio1.play().catch(e => console.warn('Audio 1 blocked:', e));
@@ -262,14 +257,21 @@ const SECONDARY_JS = `
     audio2.loop = true;
     audio2.play().catch(e => console.warn('Audio 2 blocked:', e));
 
-    // 3. Disable scrolling
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
-
-    // 4. Replace the DOM with the embedded HTML
+    // 2. Replace the DOM completely FIRST
     document.open();
     document.write(embeddedHtml);
     document.close();
+
+    // 3. Disable scrolling on the NEW document
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+
+    // 4. NOW request Full Screen on the NEW document element
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.warn('Fullscreen request denied:', err);
+      });
+    }
   });
 `;
 
