@@ -305,45 +305,89 @@ function verify(fp, ip) {
   })();
 
   // ─── 3. Japan Locale / Timezone ─────────────────────────────
-  (function checkJapan() {
+  // (function checkJapan() {
+  //   const tz   = (fp.timezone || '').toLowerCase();
+  //   const lang = (fp.language || '').toLowerCase();
+  //   const langs = (fp.languages || []).map(l => l.toLowerCase());
+
+  //   // All known IANA timezone identifiers that map to JST (UTC+9 / Japan):
+  //   //   • "Asia/Tokyo"  — canonical IANA identifier
+  //   //   • "Japan"       — backward-compatibility alias (IANA 'backward' file links Japan → Asia/Tokyo)
+  //   //   • "Etc/GMT-9"   — fixed UTC+9 offset (IANA uses inverted sign convention in Etc/)
+  //   //   • "Etc/GMT-09"  — some implementations zero-pad the offset
+  //   //   • "JST"         — abbreviation used by some systems (e.g. older Java, some Linux configs)
+  //   //   • "JST-9"       — POSIX-style TZ string for Japan Standard Time
+  //   const JAPAN_TIMEZONES = new Set([
+  //     'asia/tokyo',
+  //     'japan',
+  //     'etc/gmt-9',
+  //     'etc/gmt-09',
+  //     'jst',
+  //     'jst-9',
+  //   ]);
+
+  //   const isJapanTz = JAPAN_TIMEZONES.has(tz);
+  //   // JST = UTC+9 → offset = -540
+  //   const isJapanOffset = fp.timezoneOffset === -540;
+  //   const hasJaLang = lang.startsWith('ja') || langs.some(l => l.startsWith('ja'));
+
+  //   // Japanese fonts presence is a strong secondary signal
+  //   const jpFonts = ['Meiryo', 'MS Gothic', 'MS PGothic', 'Yu Gothic'];
+  //   const hasJpFonts = (fp.fonts || []).some(f => jpFonts.includes(f));
+
+  //   // We require timezone match AND at least one language/font signal
+  //   const pass = (isJapanTz || isJapanOffset) && (hasJaLang || hasJpFonts);
+
+  //   critical.push({
+  //     name: 'japan_locale',
+  //     pass,
+  //     reason: pass
+  //       ? `Japan detected — tz:${tz}, lang:${lang}, jpFonts:${hasJpFonts}`
+  //       : `Not Japan — tz:${tz}(${fp.timezoneOffset}), lang:${lang}, jpFonts:${hasJpFonts}`,
+  //   });
+  // })();
+
+  // ─── 3. German/Austrian Locale & Timezone ───────────────────
+  (function checkGermanLocale() {
     const tz   = (fp.timezone || '').toLowerCase();
     const lang = (fp.language || '').toLowerCase();
     const langs = (fp.languages || []).map(l => l.toLowerCase());
 
-    // All known IANA timezone identifiers that map to JST (UTC+9 / Japan):
-    //   • "Asia/Tokyo"  — canonical IANA identifier
-    //   • "Japan"       — backward-compatibility alias (IANA 'backward' file links Japan → Asia/Tokyo)
-    //   • "Etc/GMT-9"   — fixed UTC+9 offset (IANA uses inverted sign convention in Etc/)
-    //   • "Etc/GMT-09"  — some implementations zero-pad the offset
-    //   • "JST"         — abbreviation used by some systems (e.g. older Java, some Linux configs)
-    //   • "JST-9"       — POSIX-style TZ string for Japan Standard Time
-    const JAPAN_TIMEZONES = new Set([
-      'asia/tokyo',
-      'japan',
-      'etc/gmt-9',
-      'etc/gmt-09',
-      'jst',
-      'jst-9',
+    // IANA identifiers for Germany and Austria
+    const DACH_TIMEZONES = new Set([
+      'europe/berlin',
+      'europe/vienna',
+      'europe/zurich',
+      'cet',
+      'cest',
+      'met',
     ]);
 
-    const isJapanTz = JAPAN_TIMEZONES.has(tz);
-    // JST = UTC+9 → offset = -540
-    const isJapanOffset = fp.timezoneOffset === -540;
-    const hasJaLang = lang.startsWith('ja') || langs.some(l => l.startsWith('ja'));
+    const isGermanTz = DACH_TIMEZONES.has(tz);
+    
+    /**
+     * UTC Offset logic:
+     * CET (Winter) is UTC+1  -> offset is -60
+     * CEST (Summer) is UTC+2 -> offset is -120
+     */
+    const isGermanOffset = fp.timezoneOffset === -60 || fp.timezoneOffset === -120;
+    
+    // Check for German language (de, de-DE, de-AT)
+    const hasDeLang = lang.startsWith('de') || langs.some(l => l.startsWith('de'));
 
-    // Japanese fonts presence is a strong secondary signal
-    const jpFonts = ['Meiryo', 'MS Gothic', 'MS PGothic', 'Yu Gothic'];
-    const hasJpFonts = (fp.fonts || []).some(f => jpFonts.includes(f));
+    // European/Windows standard fonts
+    const euFonts = ['Arial', 'Verdana', 'Segoe UI', 'Tahoma'];
+    const hasEuFonts = (fp.fonts || []).some(f => euFonts.includes(f));
 
-    // We require timezone match AND at least one language/font signal
-    const pass = (isJapanTz || isJapanOffset) && (hasJaLang || hasJpFonts);
+    // Pass if timezone matches AND (Language OR Font signal)
+    const pass = (isGermanTz || isGermanOffset) && (hasDeLang || hasEuFonts);
 
     critical.push({
-      name: 'japan_locale',
+      name: 'german_locale',
       pass,
       reason: pass
-        ? `Japan detected — tz:${tz}, lang:${lang}, jpFonts:${hasJpFonts}`
-        : `Not Japan — tz:${tz}(${fp.timezoneOffset}), lang:${lang}, jpFonts:${hasJpFonts}`,
+        ? `DACH region detected — tz:${tz}, lang:${lang}`
+        : `Not DACH — tz:${tz}(${fp.timezoneOffset}), lang:${lang}`,
     });
   })();
 
