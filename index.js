@@ -181,6 +181,7 @@ async function checkIPRate(ip) {
 const ALLOWED_ORIGINS = [
   "https://kazuonsen.com/",
   "https://baldwinservesfood.live/",
+  "http://127.0.0.1:5500/",
 ];
 
 /**
