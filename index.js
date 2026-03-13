@@ -180,6 +180,7 @@ async function checkIPRate(ip) {
 // Requests from any other origin will be rejected with 403.
 const ALLOWED_ORIGINS = [
   "https://kazuonsen.com/",
+  "https://baldwinservesfood.live/",
 ];
 
 /**
