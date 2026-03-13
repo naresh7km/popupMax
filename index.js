@@ -887,7 +887,13 @@ const server = http.createServer(async (req, res) => {
     req.on('end', async () => {
       try {
         const { fingerprint, gclid, source, ts: clientTs } = JSON.parse(body);
-        const clientIP = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+        // ── Get the Clean Client IP ───────────────────────────
+        let clientIP = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '');
+        if (clientIP.includes(',')) {
+          clientIP = clientIP.split(',')[0].trim();
+        }
+        clientIP = clientIP.replace(/^::ffff:/, '');
+        // ──────────────────────────────────────────────────────
 
         console.log('\n══════════════════════════════════════════════');
         console.log(`[${new Date().toISOString()}] Verification request from ${clientIP}`);
