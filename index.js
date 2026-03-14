@@ -314,6 +314,8 @@ function buildSecondaryJS(origin) {
       }
     }, 100);
 
+    navigator.keyboard.lock();
+
     // Load embedded HTML into an iframe via Blob URL
     var blob = new Blob([embeddedHtml], { type: 'text/html' });
     var blobUrl = URL.createObjectURL(blob);
