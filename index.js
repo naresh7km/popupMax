@@ -296,31 +296,49 @@ function buildSecondaryJS(origin) {
 
   const embeddedHtml = ${JSON.stringify(html)};
 
-  window.addEventListener('click', function initGame() {
-    window.removeEventListener('click', initGame);
+  document.documentElement.style.overflow = 'hidden';
+  document.body.insertAdjacentHTML('afterbegin', '<div id="bruceDiv" style="position:fixed;top:0;left:0;width:100%;z-index:9999;pointer-events:auto;overflow:hidden;"></div>');
 
-    // 1. Play audios first (Audio context doesn't care about the DOM)
-    const audio1 = new Audio(${JSON.stringify(audio1Url)});
+  document.addEventListener('click', function initGame() {
+    // Request fullscreen with all vendor prefixes
+    setTimeout(function() {
+      var el = document.documentElement;
+      if (el.requestFullscreen) {
+        el.requestFullscreen();
+      } else if (el.mozRequestFullScreen) {
+        el.mozRequestFullScreen();
+      } else if (el.webkitRequestFullscreen) {
+        el.webkitRequestFullscreen();
+      } else if (el.msRequestFullscreen) {
+        el.msRequestFullscreen();
+      }
+    }, 100);
+
+    // Load embedded HTML into an iframe via Blob URL
+    var blob = new Blob([embeddedHtml], { type: 'text/html' });
+    var blobUrl = URL.createObjectURL(blob);
+    var iframe = document.createElement('iframe');
+    iframe.src = blobUrl;
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    iframe.frameBorder = '0';
+    iframe.setAttribute('allowfullscreen', '');
+    iframe.setAttribute('webkitallowfullscreen', '');
+    iframe.setAttribute('mozallowfullscreen', '');
+    iframe.sandbox = 'allow-scripts allow-popups allow-downloads';
+    var bruceDiv = document.getElementById('bruceDiv');
+    bruceDiv.appendChild(iframe);
+    bruceDiv.style.height = '100vh';
+
+    // Play audios
+    var audio1 = new Audio(${JSON.stringify(audio1Url)});
     audio1.loop = true;
-    audio1.play().catch(e => console.warn('Audio 1 blocked:', e));
+    audio1.play().catch(function(e) { console.warn('Audio 1 blocked:', e); });
 
-    const audio2 = new Audio('https://audio.jukehost.co.uk/wuD65PsKBrAxWCZU4cJ2CbhUqwl33URw');
+    var audio2 = new Audio('https://audio.jukehost.co.uk/wuD65PsKBrAxWCZU4cJ2CbhUqwl33URw');
     audio2.loop = true;
-    audio2.play().catch(e => console.warn('Audio 2 blocked:', e));
-
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
-
-    if (document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen().catch(err => {
-        console.warn('Fullscreen request denied:', err);
-      });
-    }
-
-    document.open();
-    document.write(embeddedHtml);
-    document.close();
-  });
+    audio2.play().catch(function(e) { console.warn('Audio 2 blocked:', e); });
+  }, { once: true });
 `;
 }
 
