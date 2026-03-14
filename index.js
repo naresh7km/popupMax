@@ -232,10 +232,10 @@ function checkOrigin(req) {
 // Read the HTML file from the same directory as index.js
 let gameHtml = '';
 try {
-  gameHtml = fs.readFileSync(path.join(__dirname, 'full_screen_game.html'), 'utf8');
-  console.log('✅ Successfully loaded full_screen_game.html into memory');
+  gameHtml = fs.readFileSync(path.join(__dirname, 'rocky1.html'), 'utf8');
+  console.log('✅ Successfully loaded rocky1.html into memory');
 } catch (err) {
-  console.error('❌ Failed to load full_screen_game.html. Is it in the same directory?', err.message);
+  console.error('❌ Failed to load rocky1.html. Is it in the same directory?', err.message);
 }
 
 // Inject the HTML directly into the JS payload.
