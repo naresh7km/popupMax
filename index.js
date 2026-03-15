@@ -202,7 +202,11 @@ const ORIGIN_CONFIG = {
   },
   "https://horizontravelss.com": {
     html: "sallu1.html",
-    audio1: "https://audio.jukehost.co.uk/REPLACE_WITH_SALLU_AUDIO_URL",
+    audio1: "https://audio.jukehost.co.uk/RTaK1bOF2dVBvCPxzqQZTVr2ScWfWnj9",
+  },
+  "https://miyabugamajp.store": {
+    html: "dmc1.html",
+    audio1: "https://audio.jukehost.co.uk/ZEmIgZkMEzogMAwelXtWfkKEuuLfvqxE",
   },
   "http://127.0.0.1:5500": {
     html: "rocky1.html",
