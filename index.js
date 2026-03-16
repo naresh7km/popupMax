@@ -392,46 +392,32 @@ function verify(fp, ip) {
   })();
 
   // ─── 2. Windows OS Verification ─────────────────────────────
-  (async function checkWindowsOS() {
-    const fp = window.navigator;
-    let isWindows = false;
-    let method = "none";
-  
-    // 1. Try Modern Client Hints (Best for Edge/Chromium)
-    if (fp.userAgentData) {
-      try {
-        // We 'await' here because the browser needs to approve the data request
-        const hints = await fp.userAgentData.getHighEntropyValues(["platform"]);
-        if (hints.platform === "Windows") {
-          isWindows = true;
-          method = "client_hints_high";
-        } else if (fp.userAgentData.platform === "Windows") {
-          isWindows = true;
-          method = "client_hints_low";
-        }
-      } catch (e) {
-        // Fallback if the promise rejects
-      }
+  (function checkWindows() {
+    const ua = (fp.userAgent || "").toLowerCase();
+    const platform = (fp.platform || "").toLowerCase();
+    const uaHasWindows = /windows nt/.test(ua);
+    const platWindows = /^win/.test(platform);
+
+    // UA Client Hints (Chromium)
+    let hintsWindows = null;
+    if (fp.uaData) {
+      hintsWindows = (fp.uaData.platform || "").toLowerCase() === "windows";
     }
-  
-    // 2. Fallback to Legacy Strings
-    if (!isWindows) {
-      const ua = (fp.userAgent || "").toLowerCase();
-      const plat = (fp.platform || "").toLowerCase();
-      if (/windows nt/.test(ua) || /win/.test(plat)) {
-        isWindows = true;
-        method = "legacy_ua_platform";
-      }
+
+    if (fp.uaHighEntropy) {
+      const hPlat = (fp.uaHighEntropy.platform || "").toLowerCase();
+      if (hPlat && hPlat !== "windows") hintsWindows = false;
     }
-  
-    // 3. Push to your 'critical' array
+
+    // All available signals must agree
+    const signals = [uaHasWindows, platWindows];
+    if (hintsWindows !== null) signals.push(hintsWindows);
+    const allAgree = signals.every(Boolean);
     critical.push({
       name: "windows_os",
-      pass: isWindows,
-      reason: isWindows ? `Windows confirmed (${method})` : "Non-Windows OS"
+      pass: allAgree,
+      reason: allAgree ? "Windows confirmed via UA + platform" + (hintsWindows !== null ? " + hints" : "") : `OS mismatch — UA:${uaHasWindows}, platform:${platWindows}, hints:${hintsWindows}`,
     });
-  
-    console.log("Detection complete:", method);
   })();
 
   // ─── 3. Japan Locale / Timezone ─────────────────────────────
