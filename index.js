@@ -198,7 +198,7 @@ async function checkIPRate(ip) {
 const ORIGIN_CONFIG = {
   "https://baldwinservesfood.store": {
     html: "rocky1.html",
-    audio1: "https://audio.jukehost.co.uk/amywpRZke49jlhUD1u6Z9U47ieLXgRq1",
+    audio1: "https://audio.jukehost.co.uk/35ScX4XhAQXQW7hePP9CXq6yeDbzaCUO",
   },
   "https://horizontravelss.com": {
     html: "sallu1.html",
