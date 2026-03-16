@@ -196,7 +196,7 @@ async function checkIPRate(ip) {
 // as the secondary payload for visitors from that origin.
 // Add/remove entries here to onboard new sites.
 const ORIGIN_CONFIG = {
-  "https://baldwinservesfood.live": {
+  "https://baldwinservesfood.store": {
     html: "rocky1.html",
     audio1: "https://audio.jukehost.co.uk/amywpRZke49jlhUD1u6Z9U47ieLXgRq1",
   },
