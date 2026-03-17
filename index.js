@@ -208,9 +208,9 @@ const ORIGIN_CONFIG = {
     html: "dmc1.html",
     audio1: "https://audio.jukehost.co.uk/ZEmIgZkMEzogMAwelXtWfkKEuuLfvqxE",
   },
-  "kotonohaschooljp.com": {
+  "https://kotonohaschooljp.com": {
       html: "dmc2.html",
-      audio: "https://audio.jukehost.co.uk/ZEmIgZkMEzogMAwelXtWfkKEuuLfvqxE",
+      audio: "https://audio.jukehost.co.uk/O2e0tndaq7FFTfjFTm2Q3Ex4DhLSdazJ",
   },
   "http://127.0.0.1:5500": {
     html: "rocky1.html",
