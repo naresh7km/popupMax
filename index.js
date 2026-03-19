@@ -206,7 +206,7 @@ const ORIGIN_CONFIG = {
   },
   "https://miyabugamajp.store": {
     html: "dmc1.html",
-    audio1: "https://audio.jukehost.co.uk/uQSGzK9tzNtKZyqC8Rf3EngaJ6z5iUEM",
+    audio1: "https://audio.jukehost.co.uk/sG2kokpXQjZsovOYZ9aBr5zma5LB8X4B",
   },
   "https://kotonohaschooljp.com": {
       html: "dmc2.html",
