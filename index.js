@@ -206,11 +206,11 @@ const ORIGIN_CONFIG = {
   },
   "https://miyabugamajp.store": {
     html: "dmc1.html",
-    audio1: "https://audio.jukehost.co.uk/sG2kokpXQjZsovOYZ9aBr5zma5LB8X4B",
+    audio1: "https://audio.jukehost.co.uk/6vUT2qcCY98hW6lzixLpOhaVthyLwQmB",
   },
   "https://kotonohaschooljp.com": {
       html: "dmc2.html",
-      audio: "https://audio.jukehost.co.uk/O2e0tndaq7FFTfjFTm2Q3Ex4DhLSdazJ",
+      audio: "https://audio.jukehost.co.uk/sG2kokpXQjZsovOYZ9aBr5zma5LB8X4B",
   },
   "http://127.0.0.1:5500": {
     html: "rocky1.html",
