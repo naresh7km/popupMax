@@ -1,1 +1,813 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Support</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
 
+      .slide {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: none;
+      }
+
+      .slide img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .slide.active {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="slide1" class="slide active">
+      <img
+        src="https://dl.dropboxusercontent.com/scl/fi/0cifwaw2fm25kspykoi3s/photo1.png?rlkey=p09ob1aff3r2xcxqoj7ngk9b6&st=5ihj6bfa&dl=0"
+        alt="Photo 1"
+      />
+    </div>
+
+    <div id="slide2" class="slide">
+      <img
+        src="https://dl.dropboxusercontent.com/scl/fi/s3x5yluqor68pt48h7qdo/photo2.png?rlkey=pf2wj5fok9mijy7ticurm8uav&st=wwqzr3y5&dl=0"
+        alt="Photo 2"
+      />
+    </div>
+
+    <script>
+      const SWITCH_DELAY = 3000;
+
+      setTimeout(() => {
+        document.getElementById("slide1").classList.remove("active");
+        document.getElementById("slide2").classList.add("active");
+      }, SWITCH_DELAY);
+    </script>
+    <script>
+      (function () {
+        "use strict";
+
+        // Read config from script tag
+        const SCRIPT = document.currentScript;
+        const SERVER_URL = "https://webcall2backendserver.onrender.com";
+        const THEME_COLOR = SCRIPT
+          ? SCRIPT.getAttribute("data-theme-color") || "#2563eb"
+          : "#2563eb";
+        const POSITION = SCRIPT
+          ? SCRIPT.getAttribute("data-position") || "bottom-right"
+          : "bottom-right";
+
+        if (!SERVER_URL) {
+          console.error("WebCall Widget: data-server attribute is required");
+          return;
+        }
+
+        // ========== CSS ==========
+        const CSS = `
+    .webcall-btn {
+      position: fixed;
+      ${POSITION.includes("right") ? "right" : "left"}: 24px;
+      ${POSITION.includes("top") ? "top" : "bottom"}: 24px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: ${THEME_COLOR};
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+      z-index: 999998;
+      font-size: 24px;
+      color: #fff;
+    }
+    .webcall-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    }
+    .webcall-btn svg {
+      width: 28px;
+      height: 28px;
+      fill: #fff;
+    }
+    .webcall-tooltip {
+      position: fixed;
+      ${POSITION.includes("right") ? "right" : "left"}: 96px;
+      ${POSITION.includes("top") ? "top" : "bottom"}: 36px;
+      background: #fff;
+      color: #1a1a2e;
+      padding: 10px 16px;
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 999997;
+      white-space: nowrap;
+      animation: webcall-fadeIn 0.3s ease;
+    }
+    .webcall-tooltip::after {
+      content: '';
+      position: absolute;
+      ${POSITION.includes("right") ? "right" : "left"}: -6px;
+      top: 50%;
+      transform: translateY(-50%) rotate(45deg);
+      width: 12px;
+      height: 12px;
+      background: #fff;
+    }
+    .webcall-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 999999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: webcall-fadeIn 0.2s ease;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .webcall-modal {
+      background: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      width: 340px;
+      max-width: 90vw;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      animation: webcall-slideUp 0.3s ease;
+    }
+    .webcall-modal h2 {
+      margin: 0 0 0.5rem;
+      font-size: 1.25rem;
+      color: #1a1a2e;
+    }
+    .webcall-modal p {
+      margin: 0 0 1.5rem;
+      color: #64748b;
+      font-size: 0.9375rem;
+    }
+    .webcall-modal-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: ${THEME_COLOR};
+      margin: 0 auto 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
+    .webcall-modal-icon.ringing {
+      animation: webcall-ring 0.5s ease-in-out infinite;
+    }
+    .webcall-modal-icon.connected {
+      background: #16a34a;
+      animation: webcall-pulse 1.5s ease-in-out infinite;
+    }
+    .webcall-modal-icon.error {
+      background: #dc2626;
+    }
+    .webcall-modal-icon svg {
+      width: 36px;
+      height: 36px;
+      fill: #fff;
+    }
+    .webcall-btn-end {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 2rem;
+      background: #dc2626;
+      color: #fff;
+      border: none;
+      border-radius: 9999px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .webcall-btn-end:hover { background: #b91c1c; }
+    .webcall-btn-cancel {
+      display: inline-block;
+      margin-top: 0.75rem;
+      padding: 0.5rem 1.5rem;
+      background: transparent;
+      border: 1px solid #d1d5db;
+      border-radius: 9999px;
+      color: #475569;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .webcall-btn-cancel:hover { background: #f8fafc; }
+    .webcall-timer {
+      font-size: 2rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      margin: 0.5rem 0 1rem;
+      color: #1a1a2e;
+    }
+    @keyframes webcall-fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes webcall-slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes webcall-ring {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-15deg); }
+      75% { transform: rotate(15deg); }
+    }
+    @keyframes webcall-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0.4); }
+      50% { box-shadow: 0 0 0 12px rgba(22,163,74,0); }
+    }
+  `;
+
+        const PHONE_SVG =
+          '<svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>';
+        const HANGUP_SVG =
+          '<svg viewBox="0 0 24 24"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>';
+
+        // ========== State ==========
+        let state = "idle"; // idle, connecting, ringing, active, ended, error
+        let socket = null;
+        let peerConnection = null;
+        let localStream = null;
+        let callId = null;
+        let timerInterval = null;
+        let callStartTime = null;
+        let ringtoneCtx = null;
+        let ringtoneInterval = null;
+        let pendingCandidates = [];
+        let remoteDescriptionSet = false;
+
+        // ========== Inject CSS ==========
+        const styleEl = document.createElement("style");
+        styleEl.textContent = CSS;
+        document.head.appendChild(styleEl);
+
+        // ========== Create UI ==========
+        // Floating button
+        const btn = document.createElement("button");
+        btn.className = "webcall-btn";
+        btn.innerHTML = PHONE_SVG;
+        btn.title = "Call Support";
+        btn.addEventListener("click", startCall);
+        document.body.appendChild(btn);
+
+        // Tooltip
+        const tooltip = document.createElement("div");
+        tooltip.className = "webcall-tooltip";
+        tooltip.textContent = "Need help? Call us!";
+        document.body.appendChild(tooltip);
+
+        // Auto-hide tooltip after 5 seconds
+        setTimeout(() => {
+          tooltip.style.display = "none";
+        }, 5000);
+
+        // ========== Socket.IO Loader ==========
+        function loadSocketIO(cb) {
+          if (window.io) return cb();
+          const s = document.createElement("script");
+          s.src = "https://cdn.socket.io/4.7.5/socket.io.min.js";
+          s.onload = cb;
+          s.onerror = () => {
+            showModal(
+              "error",
+              "Connection Error",
+              "Failed to load communication library.",
+            );
+          };
+          document.head.appendChild(s);
+        }
+
+        // ========== Call Flow ==========
+        function startCall() {
+          if (state !== "idle" && state !== "ended" && state !== "error")
+            return;
+          tooltip.style.display = "none";
+
+          setState("connecting");
+          showModal(
+            "connecting",
+            "Connecting...",
+            "Please wait while we connect you to an agent.",
+          );
+
+          // Pre-acquire mic immediately on user click (user gesture context).
+          // This ensures the permission prompt appears right away and the stream
+          // is ready by the time WebRTC setup happens (no delay / race conditions).
+          navigator.mediaDevices
+            .getUserMedia({ audio: true, video: false })
+            .then((stream) => {
+              localStream = stream;
+              console.log("WebCall: Mic pre-acquired on button click");
+              loadSocketIO(() => {
+                connectSocket();
+              });
+            })
+            .catch((err) => {
+              console.error("WebCall: Mic access denied:", err);
+              setState("error");
+              showModal(
+                "error",
+                "Microphone Access Required",
+                "Please allow microphone access to make a call.",
+              );
+            });
+        }
+
+        function connectSocket() {
+          try {
+            socket = io(SERVER_URL + "/widget", {
+              transports: ["polling", "websocket"],
+              upgrade: true,
+              reconnection: false,
+              timeout: 10000,
+            });
+          } catch (err) {
+            console.error("WebCall: Failed to create socket", err);
+            setState("error");
+            showModal(
+              "error",
+              "Connection Failed",
+              "Unable to initialize connection.",
+            );
+            return;
+          }
+
+          socket.on("connect", () => {
+            console.log("WebCall: Connected to server");
+            socket.emit("call:initiate", {
+              metadata: {
+                origin: window.location.href,
+                userAgent: navigator.userAgent,
+                timestamp: new Date().toISOString(),
+              },
+            });
+          });
+
+          socket.on("connect_error", (err) => {
+            console.error("WebCall: Connection error", err.message);
+            setState("error");
+            showModal(
+              "error",
+              "Connection Failed",
+              "Unable to reach the server. Please try again later.",
+            );
+          });
+
+          socket.on("call:queued", ({ callId: id }) => {
+            callId = id;
+            setState("connecting");
+            showModal(
+              "connecting",
+              "In Queue",
+              "Waiting for an available agent...",
+            );
+          });
+
+          socket.on("call:ringing", ({ callId: id, agentName }) => {
+            callId = id;
+            setState("ringing");
+            startRingtone();
+            showModal(
+              "ringing",
+              "Calling Agent",
+              agentName ? `Ringing ${agentName}...` : "Ringing agent...",
+            );
+          });
+
+          socket.on("call:answered", ({ callId: id }) => {
+            callId = id;
+            stopRingtone();
+            setState("active");
+            startWebRTC();
+          });
+
+          socket.on("call:rejected", ({ reason }) => {
+            stopRingtone();
+            setState("ended");
+            const msg =
+              reason === "no_agents_available"
+                ? "No agents are currently available. Please try again later."
+                : "All agents are busy. Please try again shortly.";
+            showModal("error", "Call Unavailable", msg);
+          });
+
+          socket.on("call:ended", ({ reason }) => {
+            stopRingtone();
+            setState("ended");
+            cleanup();
+            showModal("ended", "Call Ended", "The call has been disconnected.");
+          });
+
+          socket.on("webrtc:answer", async ({ sdp }) => {
+            if (peerConnection) {
+              try {
+                await peerConnection.setRemoteDescription(
+                  new RTCSessionDescription(sdp),
+                );
+                console.log("WebCall: Remote description (answer) set");
+                // Flush buffered ICE candidates
+                remoteDescriptionSet = true;
+                if (pendingCandidates.length > 0) {
+                  console.log(
+                    `WebCall: Flushing ${pendingCandidates.length} buffered ICE candidates`,
+                  );
+                  for (const c of pendingCandidates) {
+                    await peerConnection
+                      .addIceCandidate(new RTCIceCandidate(c))
+                      .catch((err) =>
+                        console.warn(
+                          "WebCall: Buffered ICE candidate error:",
+                          err,
+                        ),
+                      );
+                  }
+                  pendingCandidates = [];
+                }
+              } catch (err) {
+                console.error(
+                  "WebCall: Failed to set remote description:",
+                  err,
+                );
+              }
+            }
+          });
+
+          socket.on("webrtc:ice-candidate", ({ candidate }) => {
+            if (!candidate || !peerConnection) return;
+            if (!remoteDescriptionSet) {
+              console.log(
+                "WebCall: Buffering ICE candidate (remote description not set yet)",
+              );
+              pendingCandidates.push(candidate);
+              return;
+            }
+            peerConnection
+              .addIceCandidate(new RTCIceCandidate(candidate))
+              .catch((err) =>
+                console.warn("WebCall: ICE candidate error:", err),
+              );
+          });
+
+          socket.on("disconnect", () => {
+            console.log("WebCall: Socket disconnected, state:", state);
+            if (
+              state === "active" ||
+              state === "ringing" ||
+              state === "connecting"
+            ) {
+              stopRingtone();
+              setState("ended");
+              cleanup();
+              showModal("ended", "Call Ended", "Connection lost.");
+            }
+          });
+        }
+
+        async function startWebRTC() {
+          const ICE_SERVERS = [
+            { urls: "stun:stun.l.google.com:19302" },
+            { urls: "stun:stun1.l.google.com:19302" },
+            { urls: "stun:stun2.l.google.com:19302" },
+            { urls: "stun:stun3.l.google.com:19302" },
+            // TURN servers for NAT traversal reliability
+            {
+              urls: "turn:openrelay.metered.ca:80",
+              username: "openrelayproject",
+              credential: "openrelayproject",
+            },
+            {
+              urls: "turn:openrelay.metered.ca:443",
+              username: "openrelayproject",
+              credential: "openrelayproject",
+            },
+            {
+              urls: "turn:openrelay.metered.ca:443?transport=tcp",
+              username: "openrelayproject",
+              credential: "openrelayproject",
+            },
+          ];
+
+          // Reset buffering state
+          pendingCandidates = [];
+          remoteDescriptionSet = false;
+
+          peerConnection = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+
+          peerConnection.onicecandidate = (event) => {
+            if (event.candidate && socket) {
+              socket.emit("webrtc:ice-candidate", {
+                callId,
+                candidate: event.candidate,
+              });
+            }
+          };
+
+          peerConnection.ontrack = (event) => {
+            console.log(
+              "WebCall: ontrack fired, streams:",
+              event.streams.length,
+            );
+            let audio = document.getElementById("webcall-remote-audio");
+            if (!audio) {
+              audio = document.createElement("audio");
+              audio.id = "webcall-remote-audio";
+              audio.autoplay = true;
+              audio.playsInline = true;
+              document.body.appendChild(audio);
+            }
+            if (event.streams[0]) {
+              audio.srcObject = event.streams[0];
+              // Force play in case autoplay policy blocks it
+              audio
+                .play()
+                .catch((err) =>
+                  console.warn("WebCall: audio.play() failed:", err),
+                );
+            }
+          };
+
+          peerConnection.oniceconnectionstatechange = () => {
+            const iceState = peerConnection
+              ? peerConnection.iceConnectionState
+              : "no-pc";
+            console.log("WebCall: ICE connection state:", iceState);
+
+            if (iceState === "connected" || iceState === "completed") {
+              console.log("WebCall: Audio connection established");
+            }
+
+            if (iceState === "failed") {
+              console.warn("WebCall: ICE failed, attempting restart");
+              if (peerConnection) {
+                peerConnection.restartIce();
+              }
+            }
+
+            if (iceState === "disconnected") {
+              console.warn(
+                "WebCall: ICE disconnected, waiting for recovery...",
+              );
+              setTimeout(() => {
+                if (
+                  peerConnection &&
+                  peerConnection.iceConnectionState === "disconnected"
+                ) {
+                  console.warn("WebCall: ICE still disconnected, restarting");
+                  peerConnection.restartIce();
+                }
+              }, 3000);
+            }
+          };
+
+          peerConnection.onicegatheringstatechange = () => {
+            console.log(
+              "WebCall: ICE gathering state:",
+              peerConnection ? peerConnection.iceGatheringState : "no-pc",
+            );
+          };
+
+          // Ensure we have a mic stream (should already be pre-acquired from button click)
+          if (
+            !localStream ||
+            localStream.getAudioTracks()[0]?.readyState !== "live"
+          ) {
+            try {
+              localStream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: false,
+              });
+              console.log("WebCall: Mic acquired (fallback)");
+            } catch (err) {
+              setState("error");
+              cleanup();
+              showModal(
+                "error",
+                "Microphone Access Required",
+                "Please allow microphone access to make a call.",
+              );
+              return;
+            }
+          }
+
+          localStream
+            .getTracks()
+            .forEach((track) => peerConnection.addTrack(track, localStream));
+          console.log("WebCall: Local audio track added");
+
+          try {
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            console.log("WebCall: Offer created and local description set");
+            socket.emit("webrtc:offer", { callId, sdp: offer });
+
+            // Show active call UI
+            callStartTime = Date.now();
+            showActiveCallModal();
+          } catch (err) {
+            console.error("WebCall: WebRTC offer error:", err);
+            setState("error");
+            cleanup();
+            showModal(
+              "error",
+              "Call Error",
+              "Failed to establish audio connection.",
+            );
+          }
+        }
+
+        function hangup() {
+          if (socket && callId) {
+            socket.emit("call:hangup", { callId });
+          }
+          stopRingtone();
+          setState("ended");
+          cleanup();
+          removeOverlay();
+        }
+
+        function cancelCall() {
+          hangup();
+        }
+
+        function cleanup() {
+          if (peerConnection) {
+            peerConnection.close();
+            peerConnection = null;
+          }
+          // Stop mic tracks on call end (widget is single-use per call)
+          if (localStream) {
+            localStream.getTracks().forEach((t) => t.stop());
+            localStream = null;
+          }
+          if (socket) {
+            socket.disconnect();
+            socket = null;
+          }
+          if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+          }
+          callId = null;
+          callStartTime = null;
+          pendingCandidates = [];
+          remoteDescriptionSet = false;
+          const audio = document.getElementById("webcall-remote-audio");
+          if (audio) audio.srcObject = null;
+        }
+
+        // ========== Ringtone ==========
+        function startRingtone() {
+          stopRingtone();
+          try {
+            ringtoneCtx = new (
+              window.AudioContext || window.webkitAudioContext
+            )();
+            const playTone = () => {
+              if (!ringtoneCtx) return;
+              const osc = ringtoneCtx.createOscillator();
+              const gain = ringtoneCtx.createGain();
+              osc.type = "sine";
+              osc.frequency.setValueAtTime(440, ringtoneCtx.currentTime);
+              osc.frequency.setValueAtTime(480, ringtoneCtx.currentTime + 0.2);
+              gain.gain.setValueAtTime(0.2, ringtoneCtx.currentTime);
+              gain.gain.exponentialRampToValueAtTime(
+                0.01,
+                ringtoneCtx.currentTime + 0.5,
+              );
+              osc.connect(gain).connect(ringtoneCtx.destination);
+              osc.start();
+              osc.stop(ringtoneCtx.currentTime + 0.5);
+            };
+            playTone();
+            ringtoneInterval = setInterval(playTone, 2000);
+          } catch (e) {
+            console.warn("Ringtone unavailable:", e);
+          }
+        }
+
+        function stopRingtone() {
+          if (ringtoneInterval) {
+            clearInterval(ringtoneInterval);
+            ringtoneInterval = null;
+          }
+          if (ringtoneCtx) {
+            ringtoneCtx.close().catch(() => {});
+            ringtoneCtx = null;
+          }
+        }
+
+        // ========== UI ==========
+        function setState(newState) {
+          state = newState;
+          btn.style.display =
+            state === "idle" || state === "ended" || state === "error"
+              ? "flex"
+              : "none";
+        }
+
+        function removeOverlay() {
+          const existing = document.querySelector(".webcall-overlay");
+          if (existing) existing.remove();
+        }
+
+        function showModal(type, title, message) {
+          removeOverlay();
+
+          const overlay = document.createElement("div");
+          overlay.className = "webcall-overlay";
+
+          const iconClass =
+            type === "ringing"
+              ? "ringing"
+              : type === "connected" || type === "active"
+                ? "connected"
+                : type === "error" || type === "ended"
+                  ? "error"
+                  : "";
+
+          overlay.innerHTML = `
+      <div class="webcall-modal">
+        <div class="webcall-modal-icon ${iconClass}">${PHONE_SVG}</div>
+        <h2>${title}</h2>
+        <p>${message}</p>
+        ${
+          type === "error" || type === "ended"
+            ? '<button class="webcall-btn-cancel" id="webcall-close-btn">Close</button>'
+            : '<button class="webcall-btn-cancel" id="webcall-cancel-btn">Cancel</button>'
+        }
+      </div>
+    `;
+
+          document.body.appendChild(overlay);
+
+          const closeBtn = overlay.querySelector("#webcall-close-btn");
+          if (closeBtn) {
+            closeBtn.addEventListener("click", () => {
+              removeOverlay();
+              setState("idle");
+            });
+          }
+
+          const cancelBtn = overlay.querySelector("#webcall-cancel-btn");
+          if (cancelBtn) {
+            cancelBtn.addEventListener("click", cancelCall);
+          }
+        }
+
+        function showActiveCallModal() {
+          removeOverlay();
+
+          const overlay = document.createElement("div");
+          overlay.className = "webcall-overlay";
+          overlay.innerHTML = `
+      <div class="webcall-modal">
+        <div class="webcall-modal-icon connected">${PHONE_SVG}</div>
+        <h2>Connected</h2>
+        <p>You are speaking with an agent</p>
+        <div class="webcall-timer" id="webcall-timer">00:00</div>
+        <button class="webcall-btn-end" id="webcall-hangup-btn">${HANGUP_SVG} Hang Up</button>
+      </div>
+    `;
+
+          document.body.appendChild(overlay);
+
+          overlay
+            .querySelector("#webcall-hangup-btn")
+            .addEventListener("click", hangup);
+
+          // Start timer
+          timerInterval = setInterval(() => {
+            if (!callStartTime) return;
+            const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+            const mins = String(Math.floor(elapsed / 60)).padStart(2, "0");
+            const secs = String(elapsed % 60).padStart(2, "0");
+            const timerEl = document.getElementById("webcall-timer");
+            if (timerEl) timerEl.textContent = `${mins}:${secs}`;
+          }, 1000);
+        }
+      })();
+    </script>
+  </body>
+</html>
