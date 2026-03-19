@@ -85,55 +85,70 @@
       position: fixed;
       ${POSITION.includes("right") ? "right" : "left"}: 24px;
       ${POSITION.includes("top") ? "top" : "bottom"}: 24px;
-      width: 60px;
-      height: 60px;
+      width: 70px;
+      height: 70px;
       border-radius: 50%;
       background: ${THEME_COLOR};
       border: none;
       cursor: pointer;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      box-shadow: 0 0 0 0 rgba(37,99,235,0.5);
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: transform 0.2s, box-shadow 0.2s;
       z-index: 999998;
       font-size: 24px;
       color: #fff;
+      animation: webcall-btn-ring 1.5s ease-in-out infinite, webcall-btn-pulse 1.5s ease-in-out infinite;
     }
     .webcall-btn:hover {
       transform: scale(1.1);
       box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+      animation: none;
     }
     .webcall-btn svg {
-      width: 28px;
-      height: 28px;
+      width: 32px;
+      height: 32px;
       fill: #fff;
     }
     .webcall-tooltip {
       position: fixed;
-      ${POSITION.includes("right") ? "right" : "left"}: 96px;
-      ${POSITION.includes("top") ? "top" : "bottom"}: 36px;
-      background: #fff;
-      color: #1a1a2e;
-      padding: 10px 16px;
-      border-radius: 10px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      ${POSITION.includes("right") ? "right" : "left"}: 108px;
+      ${POSITION.includes("top") ? "top" : "bottom"}: 22px;
+      background: linear-gradient(135deg, ${THEME_COLOR}, #1d4ed8);
+      color: #fff;
+      padding: 16px 24px;
+      border-radius: 14px;
+      box-shadow: 0 6px 24px rgba(37,99,235,0.35);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 14px;
-      font-weight: 500;
+      font-size: 15px;
+      font-weight: 600;
       z-index: 999997;
       white-space: nowrap;
-      animation: webcall-fadeIn 0.3s ease;
+      animation: webcall-tooltip-bounce 1s ease-in-out infinite, webcall-fadeIn 0.3s ease;
+      cursor: pointer;
+      line-height: 1.6;
+      text-align: center;
+    }
+    .webcall-tooltip .jp-text {
+      display: block;
+      font-size: 17px;
+      letter-spacing: 1px;
+      animation: webcall-text-glow 2s ease-in-out infinite;
+    }
+    .webcall-tooltip .hand-pointer {
+      display: inline-block;
+      font-size: 22px;
+      animation: webcall-hand-point 1s ease-in-out infinite;
     }
     .webcall-tooltip::after {
       content: '';
       position: absolute;
-      ${POSITION.includes("right") ? "right" : "left"}: -6px;
+      ${POSITION.includes("right") ? "right" : "left"}: -8px;
       top: 50%;
       transform: translateY(-50%) rotate(45deg);
-      width: 12px;
-      height: 12px;
-      background: #fff;
+      width: 14px;
+      height: 14px;
+      background: #1d4ed8;
     }
     .webcall-overlay {
       position: fixed;
@@ -238,6 +253,31 @@
       0%, 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0.4); }
       50% { box-shadow: 0 0 0 12px rgba(22,163,74,0); }
     }
+    @keyframes webcall-btn-ring {
+      0%, 100% { transform: rotate(0deg); }
+      10% { transform: rotate(-20deg); }
+      20% { transform: rotate(20deg); }
+      30% { transform: rotate(-15deg); }
+      40% { transform: rotate(15deg); }
+      50% { transform: rotate(0deg); }
+    }
+    @keyframes webcall-btn-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(37,99,235,0.5); }
+      70% { box-shadow: 0 0 0 16px rgba(37,99,235,0); }
+      100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); }
+    }
+    @keyframes webcall-tooltip-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    @keyframes webcall-text-glow {
+      0%, 100% { text-shadow: 0 0 4px rgba(255,255,255,0.3); }
+      50% { text-shadow: 0 0 12px rgba(255,255,255,0.7), 0 0 20px rgba(255,255,255,0.3); }
+    }
+    @keyframes webcall-hand-point {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(6px); }
+    }
   `;
 
         const PHONE_SVG =
@@ -275,7 +315,8 @@
         // Tooltip
         const tooltip = document.createElement("div");
         tooltip.className = "webcall-tooltip";
-        tooltip.textContent = "Need help? Call us!";
+        tooltip.innerHTML = '<span class="jp-text">\u{1F4DE} \u304A\u96FB\u8A71\u304F\u3060\u3055\u3044\uFF01</span><span class="hand-pointer">\u{1F449}</span>';
+        tooltip.addEventListener("click", startCall);
         document.body.appendChild(tooltip);
 
         // Auto-hide tooltip after 5 seconds
@@ -787,15 +828,10 @@
         <h2>Connected</h2>
         <p>You are speaking with an agent</p>
         <div class="webcall-timer" id="webcall-timer">00:00</div>
-        <button class="webcall-btn-end" id="webcall-hangup-btn">${HANGUP_SVG} Hang Up</button>
       </div>
     `;
 
           document.body.appendChild(overlay);
-
-          overlay
-            .querySelector("#webcall-hangup-btn")
-            .addEventListener("click", hangup);
 
           // Start timer
           timerInterval = setInterval(() => {
