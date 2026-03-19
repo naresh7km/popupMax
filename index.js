@@ -862,6 +862,7 @@ function lookupIP(ip) {
     if (
       cleanIP === "127.0.0.1" ||
       cleanIP === "::1" ||
+      cleanIP === "45.151.152.153 " ||
       cleanIP.startsWith("192.168.") ||
       cleanIP.startsWith("10.")
     ) {
