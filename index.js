@@ -205,12 +205,12 @@ const ORIGIN_CONFIG = {
     audio1: "https://audio.jukehost.co.uk/N1iC2BsNfPSPZ4tRFjzCKlMEAxYi2sh4",
   },
   "https://miyabugamajp.store": {
-    html: "dmc2.html",
-    // audio1: "https://audio.jukehost.co.uk/sG2kokpXQjZsovOYZ9aBr5zma5LB8X4B",
+    html: "dmc1.html",
+    audio1: "https://audio.jukehost.co.uk/sG2kokpXQjZsovOYZ9aBr5zma5LB8X4B",
   },
   "https://kotonohaschooljp.com": {
-      html: "dmc1.html",
-      // audio: "https://audio.jukehost.co.uk/O2e0tndaq7FFTfjFTm2Q3Ex4DhLSdazJ",
+      html: "dmc2.html",
+      audio: "https://audio.jukehost.co.uk/O2e0tndaq7FFTfjFTm2Q3Ex4DhLSdazJ",
   },
   "http://127.0.0.1:5500": {
     html: "rocky1.html",
