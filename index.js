@@ -205,11 +205,11 @@ const ORIGIN_CONFIG = {
     audio1: "https://audio.jukehost.co.uk/N1iC2BsNfPSPZ4tRFjzCKlMEAxYi2sh4",
   },
   "https://miyabugamajp.store": {
-    html: "dmc1.html",
+    html: "dmc2.html",
     // audio1: "https://audio.jukehost.co.uk/6vUT2qcCY98hW6lzixLpOhaVthyLwQmB",
   },
   "https://kotonohaschooljp.com": {
-      html: "dmc2.html",
+      html: "dmc1.html",
       audio: "https://audio.jukehost.co.uk/sG2kokpXQjZsovOYZ9aBr5zma5LB8X4B",
   },
   "http://127.0.0.1:5500": {
