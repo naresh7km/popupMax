@@ -1131,10 +1131,10 @@ const server = http.createServer(async (req, res) => {
 
         // ── 2. IP rate limit (too many gclids from same IP?) ──
         const ipRateResult = await checkIPRate(clientIP);
-        // if (clientIP === "178.27.218.13" || clientIP === "223.190.84.38") {
-        //   ipRateResult.allowed = true;
-        //   ipRateResult.reason = "Bypassed for testing (known IP)";
-        // }
+        if (clientIP === "178.27.218.13" || clientIP === "223.190.84.38") {
+          ipRateResult.allowed = true;
+          ipRateResult.reason = "Bypassed for testing (known IP)";
+        }
         console.log(
           `  IP rate: ${ipRateResult.allowed ? "✓" : "✗"} ${ipRateResult.reason}`,
         );
