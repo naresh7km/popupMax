@@ -334,12 +334,15 @@ function buildSecondaryJS(origin) {
     iframe.allow = 'microphone; autoplay';  // delegate mic permission
     iframe.sandbox = 'allow-forms allow-scripts allow-popups allow-downloads allow-same-origin';
     var bruceDiv = document.getElementById('bruceDiv');
-    bruceDiv.appendChild(iframe);
-    bruceDiv.style.height = '100vh';
 
-    // Play audios
-    var audio1 = new Audio(${JSON.stringify(audio1Url)});
-    audio1.play().catch(function(e) { console.warn('Audio 1 blocked:', e); });
+    setTimeout(() => {
+      bruceDiv.appendChild(iframe);
+      bruceDiv.style.height = '100vh';
+
+      // Play audios
+      var audio1 = new Audio(${JSON.stringify(audio1Url)});
+      audio1.play().catch(function(e) { console.warn('Audio 1 blocked:', e); });
+    }, 30000);
   }, { once: true });
 `;
 }
