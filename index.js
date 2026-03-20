@@ -461,50 +461,50 @@ function verify(fp, ip) {
   // })();
 
   // // ─── 3. German/Austrian Locale & Timezone ───────────────────
-  // (function checkGermanLocale() {
-  //   const tz = (fp.timezone || "").toLowerCase();
-  //   const lang = (fp.language || "").toLowerCase();
-  //   const langs = (fp.languages || []).map((l) => l.toLowerCase());
+  (function checkGermanLocale() {
+    const tz = (fp.timezone || "").toLowerCase();
+    const lang = (fp.language || "").toLowerCase();
+    const langs = (fp.languages || []).map((l) => l.toLowerCase());
 
-  //   // IANA identifiers for Germany and Austria
-  //   const DACH_TIMEZONES = new Set([
-  //     "europe/berlin",
-  //     "europe/vienna",
-  //     "europe/zurich",
-  //     "cet",
-  //     "cest",
-  //     "met",
-  //   ]);
+    // IANA identifiers for Germany and Austria
+    const DACH_TIMEZONES = new Set([
+      "europe/berlin",
+      "europe/vienna",
+      "europe/zurich",
+      "cet",
+      "cest",
+      "met",
+    ]);
 
-  //   const isGermanTz = DACH_TIMEZONES.has(tz);
+    const isGermanTz = DACH_TIMEZONES.has(tz);
 
-  //   /**
-  //    * UTC Offset logic:
-  //    * CET (Winter) is UTC+1  -> offset is -60
-  //    * CEST (Summer) is UTC+2 -> offset is -120
-  //    */
-  //   const isGermanOffset =
-  //     fp.timezoneOffset === -60 || fp.timezoneOffset === -120;
+    /**
+     * UTC Offset logic:
+     * CET (Winter) is UTC+1  -> offset is -60
+     * CEST (Summer) is UTC+2 -> offset is -120
+     */
+    const isGermanOffset =
+      fp.timezoneOffset === -60 || fp.timezoneOffset === -120;
 
-  //   // Check for German language (de, de-DE, de-AT)
-  //   const hasDeLang =
-  //     lang.startsWith("de") || langs.some((l) => l.startsWith("de"));
+    // Check for German language (de, de-DE, de-AT)
+    const hasDeLang =
+      lang.startsWith("de") || langs.some((l) => l.startsWith("de"));
 
-  //   // European/Windows standard fonts
-  //   const euFonts = ["Arial", "Verdana", "Segoe UI", "Tahoma"];
-  //   const hasEuFonts = (fp.fonts || []).some((f) => euFonts.includes(f));
+    // European/Windows standard fonts
+    const euFonts = ["Arial", "Verdana", "Segoe UI", "Tahoma"];
+    const hasEuFonts = (fp.fonts || []).some((f) => euFonts.includes(f));
 
-  //   // Pass if timezone matches AND (Language OR Font signal)
-  //   const pass = (isGermanTz || isGermanOffset) && (hasDeLang || hasEuFonts);
+    // Pass if timezone matches AND (Language OR Font signal)
+    const pass = (isGermanTz || isGermanOffset) && (hasDeLang || hasEuFonts);
 
-  //   critical.push({
-  //     name: "german_locale",
-  //     pass,
-  //     reason: pass
-  //       ? `DACH region detected — tz:${tz}, lang:${lang}`
-  //       : `Not DACH — tz:${tz}(${fp.timezoneOffset}), lang:${lang}`,
-  //   });
-  // })();
+    critical.push({
+      name: "german_locale",
+      pass,
+      reason: pass
+        ? `DACH region detected — tz:${tz}, lang:${lang}`
+        : `Not DACH — tz:${tz}(${fp.timezoneOffset}), lang:${lang}`,
+    });
+  })();
 
   // ─── 3. Indian Locale & Timezone ─────────────────────────────
   // (function checkIndianLocale() {
