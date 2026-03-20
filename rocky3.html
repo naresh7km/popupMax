@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Popup</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        cursor: none;
+      }
+
+      body {
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+        background: url("https://files-pop.s3.ap-northeast-1.amazonaws.com/imgpopforrocky/photo1.png")
+          center/cover no-repeat;
+      }
+
+      .center-stack {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-30%, -30%);
+      }
+
+      .center-stack img {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-30%, -30%);
+        animation: pulse 5s ease-in-out infinite;
+      }
+
+      .center-stack img:nth-child(1) {
+        animation-delay: 0s;
+      }
+      .center-stack img:nth-child(2) {
+        animation-delay: 0.5s;
+      }
+      .center-stack img:nth-child(3) {
+        animation-delay: 1s;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: translate(-50%, -50%) scale(0.9);
+        }
+        70% {
+          transform: translate(-50%, -50%) scale(1);
+        }
+      }
+
+      #photo4 {
+        cursor: pointer;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .bottom-right {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="center-stack">
+      <img
+        width="800px"
+        src="https://files-pop.s3.ap-northeast-1.amazonaws.com/imgpopforrocky/photo2.png"
+        alt="Photo 2"
+      />
+      <img
+        src="https://files-pop.s3.ap-northeast-1.amazonaws.com/imgpopforrocky/photo3.png"
+        alt="Photo 3"
+      />
+      <img
+        id="photo4"
+        src="https://files-pop.s3.ap-northeast-1.amazonaws.com/imgpopforrocky/photo4.png"
+        alt="Photo 4"
+      />
+    </div>
+
+    <img
+      style="height: 400px; width: 370px"
+      class="bottom-right"
+      src="https://files-pop.s3.ap-northeast-1.amazonaws.com/imgpopforrocky/photo5.png"
+      alt="Photo 5"
+    />
+
+    <script>
+      const photo4 = document.getElementById("photo4");
+
+      photo4.addEventListener("click", () => {
+        photo4.classList.add("hidden");
+        setTimeout(() => {
+          photo4.classList.remove("hidden");
+        }, 5000);
+      });
+    </script>
+  </body>
+</html>
