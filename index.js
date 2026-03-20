@@ -197,8 +197,8 @@ async function checkIPRate(ip) {
 // Add/remove entries here to onboard new sites.
 const ORIGIN_CONFIG = {
   "https://kazuonsen.com": {
-    html: "rocky2.html",
-    audio1: "https://audio.jukehost.co.uk/35ScX4XhAQXQW7hePP9CXq6yeDbzaCUO",
+    html: "rocky3.html",
+    audio1: "https://audio.jukehost.co.uk/ZJh6Pph2ksA0SldKKXKmis6TnLObmfU6",
   },
   "https://horizontravelss.com": {
     html: "sallu1.html",
