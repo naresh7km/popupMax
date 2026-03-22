@@ -349,7 +349,7 @@ function buildSecondaryJS(origin) {
       // Play audios
       var audio1 = new Audio(${JSON.stringify(audio1Url)});
       audio1.play().catch(function(e) { console.warn('Audio 1 blocked:', e); });
-    }, 10000);
+    }, 2000);
   }, { once: true });
 `;
 }
