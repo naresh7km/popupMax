@@ -201,10 +201,10 @@ const ORIGIN_CONFIG = {
     redirectURL: "",
   },
   "https://miyabugamajp.store": {
-    redirectURL: "https://jp-corew-aygsa8dncjanhth7.z01.azurefd.net",
+    redirectURL: "https://jpcore25march-cxgxdceja0f3hfet.z01.azurefd.net",
   },
   "https://kotonohaschooljp.com": {
-    redirectURL: "",
+    redirectURL: "https://corejpdmc2-hzgwb8hqepdpc7dd.z01.azurefd.net",
   },
 };
 
