@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TARGET_DOMAIN: "https://horizontravelss.com" # 🔥 CHANGE PER WORKFLOW
+      TARGET_DOMAIN: "https://kotonohaschooljp.com" # 🔥 CHANGE PER WORKFLOW
 
     steps:
       - name: Checkout repository
