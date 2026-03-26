@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TARGET_DOMAIN: "https://horizontravelss.com"
+      TARGET_DOMAIN: "https://kotonohaschooljp.com"
 
     steps:
       - name: Checkout repo
