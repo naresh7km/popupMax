@@ -3,7 +3,7 @@ name: AFD Endpoint Creator (Parallel - 5AM IST)
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 23 * * *" # 5:00 AM IST
+    - cron: "30 22 * * *" # 5:00 AM IST
 
 permissions:
   id-token: write
@@ -36,7 +36,7 @@ jobs:
           PROFILE="${{ vars.AFD_PROFILE_NAME }}"
           ORIGIN_GROUP="${{ vars.ORIGIN_GROUP_NAME }}"
 
-          TOTAL=10        # 🔥 adjust if needed
+          TOTAL=60        # 🔥 adjust if needed
           BATCH_SIZE=5    # 🔥 safe parallel level
 
           echo "Starting parallel creation..."
