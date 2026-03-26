@@ -198,7 +198,7 @@ const ORIGIN_CONFIG = {
     redirectURL: "https://corejpdmc2-hzgwb8hqepdpc7dd.z01.azurefd.net",
   },
   "https://horizontravelss.com": {
-    redirectURL: "",
+    redirectURL: "https://botcfe929-bma3f4fucvebbpfc.z01.azurefd.net",
   },
   "https://miyabugamajp.store": {
     redirectURL: "",
