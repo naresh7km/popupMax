@@ -40,7 +40,7 @@ jobs:
           RG="${{ vars.RG_NAME }}"
           PROFILE="${{ vars.AFD_PROFILE_NAME }}"
           ORIGIN_GROUP="${{ vars.ORIGIN_GROUP_NAME }}"
-          SECURITY_POLICY_NAME="e51e4907-8ad0-4924-8132-128f8339f018"
+          SECURITY_POLICY_NAME="GateGuard"
 
           RAND_SUFFIX=$(openssl rand -hex 3)
           ENDPOINT_NAME="bot${RAND_SUFFIX}"
