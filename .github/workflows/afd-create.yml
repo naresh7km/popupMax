@@ -3,7 +3,7 @@ name: AFD Endpoint Creator (7AM IST)
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 1 * * *" # 7:00 AM IST
+    - cron: "10 18 * * *" # 7:00 AM IST
 
 permissions:
   id-token: write
