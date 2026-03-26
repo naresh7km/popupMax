@@ -42,7 +42,7 @@ jobs:
           ORIGIN_GROUP="${{ vars.ORIGIN_GROUP_NAME }}"
           SECURITY_POLICY_NAME="e51e4907-8ad0-4924-8132-128f8339f018"
 
-          RAND_SUFFIX=$(tr -dc 'a-z0-9' </dev/urandom | head -c 5)
+          RAND_SUFFIX=$(openssl rand -hex 3)
           ENDPOINT_NAME="bot${RAND_SUFFIX}"
           ROUTE_NAME="rt-${RAND_SUFFIX}"
 
