@@ -1,0 +1,184 @@
+name: Rotate AFD Endpoint (Per Domain)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  rotate:
+    runs-on: ubuntu-latest
+
+    env:
+      TARGET_DOMAIN: "https://kotonohaschooljp.com" # 🔥 CHANGE THIS PER WORKFLOW
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------
+      # LOGIN TO AZURE
+      # ------------------------------------------------
+      - name: Login to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # ------------------------------------------------
+      # CREATE ENDPOINT + ROUTE + WAF
+      # ------------------------------------------------
+      - name: Create AFD endpoint and update WAF
+        id: create
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          RG="${{ vars.RG_NAME }}"
+          PROFILE="${{ vars.AFD_PROFILE_NAME }}"
+          ORIGIN_GROUP="${{ vars.ORIGIN_GROUP_NAME }}"
+          SECURITY_POLICY_NAME="e51e4907-8ad0-4924-8132-128f8339f018"
+
+          RAND_SUFFIX=$(tr -dc 'a-z0-9' </dev/urandom | head -c 5)
+          ENDPOINT_NAME="bot${RAND_SUFFIX}"
+          ROUTE_NAME="rt-${RAND_SUFFIX}"
+
+          echo "Creating endpoint: $ENDPOINT_NAME"
+
+          az afd endpoint create \
+            --resource-group "$RG" \
+            --profile-name "$PROFILE" \
+            --endpoint-name "$ENDPOINT_NAME" \
+            --enabled-state Enabled \
+            --tags created-by=github-actions
+
+          az afd route create \
+            --resource-group "$RG" \
+            --profile-name "$PROFILE" \
+            --endpoint-name "$ENDPOINT_NAME" \
+            --route-name "$ROUTE_NAME" \
+            --origin-group "$ORIGIN_GROUP" \
+            --supported-protocols Https \
+            --https-redirect Disabled \
+            --forwarding-protocol MatchRequest \
+            --link-to-default-domain Enabled \
+            --patterns-to-match "/*"
+
+          ENDPOINT_ID=$(az afd endpoint show \
+            --resource-group "$RG" \
+            --profile-name "$PROFILE" \
+            --endpoint-name "$ENDPOINT_NAME" \
+            --query id -o tsv)
+
+          EXISTING_DOMAINS=$(az afd security-policy show \
+            --resource-group "$RG" \
+            --profile-name "$PROFILE" \
+            --security-policy-name "$SECURITY_POLICY_NAME" \
+            --query "parameters.wafPolicy.domains[].id" -o tsv)
+
+          if ! echo "$EXISTING_DOMAINS" | grep -q "$ENDPOINT_ID"; then
+            az afd security-policy update \
+              --resource-group "$RG" \
+              --profile-name "$PROFILE" \
+              --security-policy-name "$SECURITY_POLICY_NAME" \
+              --domains $EXISTING_DOMAINS $ENDPOINT_ID
+          fi
+
+          echo "$ENDPOINT_NAME" > /tmp/new_endpoint_name
+
+      # ------------------------------------------------
+      # WAIT (TEST MODE)
+      # ------------------------------------------------
+      - name: Wait for propagation (TEST)
+        run: sleep 15
+
+      # ------------------------------------------------
+      # RE-LOGIN
+      # ------------------------------------------------
+      - name: Re-login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # ------------------------------------------------
+      # UPDATE ONLY TARGET DOMAIN IN index.js
+      # ------------------------------------------------
+      - name: Update index.js for target domain
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          RG="${{ vars.RG_NAME }}"
+          PROFILE="${{ vars.AFD_PROFILE_NAME }}"
+
+          NEW_ENDPOINT_NAME=$(cat /tmp/new_endpoint_name)
+
+          HOSTNAME=$(az afd endpoint show \
+            --resource-group "$RG" \
+            --profile-name "$PROFILE" \
+            --endpoint-name "$NEW_ENDPOINT_NAME" \
+            --query hostName -o tsv)
+
+          NEW_URL="https://${HOSTNAME}"
+
+          echo "Updating domain: $TARGET_DOMAIN -> $NEW_URL"
+
+          # 🔥 Replace ONLY inside that domain block
+          awk -v domain="$TARGET_DOMAIN" -v newurl="$NEW_URL" '
+          $0 ~ domain { found=1 }
+          found && /redirectURL:/ {
+            sub(/redirectURL: *"[^"]*"/, "redirectURL: \"" newurl "\"")
+            found=0
+          }
+          { print }
+          ' index.js > temp.js && mv temp.js index.js
+
+      # ------------------------------------------------
+      # CLEANUP OLD ENDPOINTS
+      # ------------------------------------------------
+      - name: Cleanup old endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          RG="${{ vars.RG_NAME }}"
+          PROFILE="${{ vars.AFD_PROFILE_NAME }}"
+          SECURITY_POLICY_NAME="e51e4907-8ad0-4924-8132-128f8339f018"
+
+          NEW_ENDPOINT_NAME=$(cat /tmp/new_endpoint_name)
+
+          BOT_ENDPOINTS=$(az afd endpoint list \
+            --resource-group "$RG" \
+            --profile-name "$PROFILE" \
+            --query "[?tags.\"created-by\"=='github-actions'].name" \
+            -o tsv)
+
+          for EP in $BOT_ENDPOINTS; do
+            if [ "$EP" = "$NEW_ENDPOINT_NAME" ]; then
+              continue
+            fi
+
+            echo "Deleting old endpoint: $EP"
+
+            az afd endpoint delete \
+              --resource-group "$RG" \
+              --profile-name "$PROFILE" \
+              --endpoint-name "$EP" \
+              --yes
+          done
+
+      # ------------------------------------------------
+      # COMMIT CHANGES
+      # ------------------------------------------------
+      - name: Commit changes
+        run: |
+          git config user.name "afd-rotator-bot"
+          git config user.email "afd-rotator-bot@users.noreply.github.com"
+          git add index.js
+          git commit -m "AFD rotation for $TARGET_DOMAIN" || true
+          git push
