@@ -95,5 +95,5 @@ jobs:
             git push
 
             echo "Sleeping 10 minutes..."
-            sleep 300
+            sleep 600
           done
