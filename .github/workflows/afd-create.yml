@@ -1,9 +1,9 @@
-name: AFD Endpoint Creator (7AM IST)
+name: AFD Endpoint Creator (Parallel - 5AM IST)
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "10 18 * * *" # 7:00 AM IST
+    - cron: "30 23 * * *" # 5:00 AM IST
 
 permissions:
   id-token: write
@@ -24,7 +24,10 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Create endpoints
+      # ------------------------------------------------
+      # PARALLEL ENDPOINT CREATION
+      # ------------------------------------------------
+      - name: Create endpoints in parallel
         shell: bash
         run: |
           set -euo pipefail
@@ -33,10 +36,15 @@ jobs:
           PROFILE="${{ vars.AFD_PROFILE_NAME }}"
           ORIGIN_GROUP="${{ vars.ORIGIN_GROUP_NAME }}"
 
-          TOTAL=60
+          TOTAL=40        # 🔥 adjust if needed
+          BATCH_SIZE=5    # 🔥 safe parallel level
+
+          echo "Starting parallel creation..."
+          echo "Total: $TOTAL | Batch size: $BATCH_SIZE"
+
           > endpoints.txt
 
-          for i in $(seq 1 $TOTAL); do
+          create_endpoint () {
             RAND=$(openssl rand -hex 3)
             NAME="bot${RAND}"
             ROUTE="rt-${RAND}"
@@ -69,18 +77,30 @@ jobs:
               --query hostName -o tsv)
 
             echo "https://${HOST}" >> endpoints.txt
-          done
+          }
 
-          # Convert to JSON array
+          export -f create_endpoint
+          export RG PROFILE ORIGIN_GROUP
+
+          # 🔥 Run in parallel
+          seq $TOTAL | xargs -n 1 -P $BATCH_SIZE -I {} bash -c 'create_endpoint'
+
+          # Convert to JSON
           jq -R . endpoints.txt | jq -s . > endpoints.json
 
+      # ------------------------------------------------
+      # RESET INDEX
+      # ------------------------------------------------
       - name: Reset rotation index
         run: echo "0" > .rotation_index
 
+      # ------------------------------------------------
+      # COMMIT FILES
+      # ------------------------------------------------
       - name: Commit endpoints
         run: |
           git config user.name "afd-bot"
           git config user.email "afd-bot@users.noreply.github.com"
           git add endpoints.json .rotation_index
-          git commit -m "Daily endpoint batch"
+          git commit -m "Daily endpoint batch (parallel)" || true
           git push
