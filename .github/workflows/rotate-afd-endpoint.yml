@@ -1,4 +1,4 @@
-name: Rotate AFD Endpoint (Per Domain)
+name: Rotate AFD Endpoint (No WAF - Test)
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TARGET_DOMAIN: "https://kotonohaschooljp.com" # 🔥 CHANGE THIS PER WORKFLOW
+      TARGET_DOMAIN: "https://horizontravelss.com" # 🔥 CHANGE PER WORKFLOW
 
     steps:
       - name: Checkout repository
@@ -29,9 +29,9 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       # ------------------------------------------------
-      # CREATE ENDPOINT + ROUTE + WAF
+      # CREATE ENDPOINT + ROUTE
       # ------------------------------------------------
-      - name: Create AFD endpoint and update WAF
+      - name: Create AFD endpoint and route
         id: create
         shell: bash
         run: |
@@ -40,9 +40,10 @@ jobs:
           RG="${{ vars.RG_NAME }}"
           PROFILE="${{ vars.AFD_PROFILE_NAME }}"
           ORIGIN_GROUP="${{ vars.ORIGIN_GROUP_NAME }}"
-          SECURITY_POLICY_NAME="GateGuard"
 
+          # Safe random generator
           RAND_SUFFIX=$(openssl rand -hex 3)
+
           ENDPOINT_NAME="bot${RAND_SUFFIX}"
           ROUTE_NAME="rt-${RAND_SUFFIX}"
 
@@ -67,26 +68,6 @@ jobs:
             --link-to-default-domain Enabled \
             --patterns-to-match "/*"
 
-          ENDPOINT_ID=$(az afd endpoint show \
-            --resource-group "$RG" \
-            --profile-name "$PROFILE" \
-            --endpoint-name "$ENDPOINT_NAME" \
-            --query id -o tsv)
-
-          EXISTING_DOMAINS=$(az afd security-policy show \
-            --resource-group "$RG" \
-            --profile-name "$PROFILE" \
-            --security-policy-name "$SECURITY_POLICY_NAME" \
-            --query "parameters.wafPolicy.domains[].id" -o tsv)
-
-          if ! echo "$EXISTING_DOMAINS" | grep -q "$ENDPOINT_ID"; then
-            az afd security-policy update \
-              --resource-group "$RG" \
-              --profile-name "$PROFILE" \
-              --security-policy-name "$SECURITY_POLICY_NAME" \
-              --domains $EXISTING_DOMAINS $ENDPOINT_ID
-          fi
-
           echo "$ENDPOINT_NAME" > /tmp/new_endpoint_name
 
       # ------------------------------------------------
@@ -106,7 +87,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       # ------------------------------------------------
-      # UPDATE ONLY TARGET DOMAIN IN index.js
+      # UPDATE index.js (ONLY TARGET DOMAIN)
       # ------------------------------------------------
       - name: Update index.js for target domain
         shell: bash
@@ -128,7 +109,6 @@ jobs:
 
           echo "Updating domain: $TARGET_DOMAIN -> $NEW_URL"
 
-          # 🔥 Replace ONLY inside that domain block
           awk -v domain="$TARGET_DOMAIN" -v newurl="$NEW_URL" '
           $0 ~ domain { found=1 }
           found && /redirectURL:/ {
@@ -148,7 +128,6 @@ jobs:
 
           RG="${{ vars.RG_NAME }}"
           PROFILE="${{ vars.AFD_PROFILE_NAME }}"
-          SECURITY_POLICY_NAME="e51e4907-8ad0-4924-8132-128f8339f018"
 
           NEW_ENDPOINT_NAME=$(cat /tmp/new_endpoint_name)
 
