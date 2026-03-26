@@ -1,0 +1,86 @@
+name: AFD Endpoint Creator (7AM IST)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 1 * * *" # 7:00 AM IST
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          RG="${{ vars.RG_NAME }}"
+          PROFILE="${{ vars.AFD_PROFILE_NAME }}"
+          ORIGIN_GROUP="${{ vars.ORIGIN_GROUP_NAME }}"
+
+          TOTAL=60
+          > endpoints.txt
+
+          for i in $(seq 1 $TOTAL); do
+            RAND=$(openssl rand -hex 3)
+            NAME="bot${RAND}"
+            ROUTE="rt-${RAND}"
+
+            echo "Creating: $NAME"
+
+            az afd endpoint create \
+              --resource-group "$RG" \
+              --profile-name "$PROFILE" \
+              --endpoint-name "$NAME" \
+              --enabled-state Enabled \
+              --tags created-by=github-actions
+
+            az afd route create \
+              --resource-group "$RG" \
+              --profile-name "$PROFILE" \
+              --endpoint-name "$NAME" \
+              --route-name "$ROUTE" \
+              --origin-group "$ORIGIN_GROUP" \
+              --supported-protocols Https \
+              --https-redirect Disabled \
+              --forwarding-protocol MatchRequest \
+              --link-to-default-domain Enabled \
+              --patterns-to-match "/*"
+
+            HOST=$(az afd endpoint show \
+              --resource-group "$RG" \
+              --profile-name "$PROFILE" \
+              --endpoint-name "$NAME" \
+              --query hostName -o tsv)
+
+            echo "https://${HOST}" >> endpoints.txt
+          done
+
+          # Convert to JSON array
+          jq -R . endpoints.txt | jq -s . > endpoints.json
+
+      - name: Reset rotation index
+        run: echo "0" > .rotation_index
+
+      - name: Commit endpoints
+        run: |
+          git config user.name "afd-bot"
+          git config user.email "afd-bot@users.noreply.github.com"
+          git add endpoints.json .rotation_index
+          git commit -m "Daily endpoint batch"
+          git push
