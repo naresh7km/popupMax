@@ -1,9 +1,7 @@
-name: AFD Rotator (Every 10 Min)
+name: AFD Rotator (Loop Mode)
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "*/5 19 * * *" # 8AM–5PM IST
 
 permissions:
   id-token: write
@@ -14,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TARGET_DOMAIN: "https://kotonohaschooljp.com" # 🔥 CHANGE
+      TARGET_DOMAIN: "https://horizontravelss.com"
 
     steps:
       - name: Checkout repo
@@ -27,7 +25,10 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Rotate endpoint
+      # ------------------------------------------------
+      # LOOP ROTATION
+      # ------------------------------------------------
+      - name: Run rotation loop
         shell: bash
         run: |
           set -euo pipefail
@@ -35,47 +36,64 @@ jobs:
           RG="${{ vars.RG_NAME }}"
           PROFILE="${{ vars.AFD_PROFILE_NAME }}"
 
-          INDEX=$(cat .rotation_index 2>/dev/null || echo 0)
+          START_TIME=$(date +%s)
 
-          NEW_URL=$(jq -r ".[$INDEX]" endpoints.json)
+          while true; do
+            NOW=$(date +%s)
+            ELAPSED=$(( (NOW - START_TIME) / 60 ))
 
-          if [ "$NEW_URL" = "null" ]; then
-            echo "No more endpoints"
-            exit 0
-          fi
+            echo "Running... elapsed minutes: $ELAPSED"
 
-          echo "Using endpoint: $NEW_URL"
+            # Stop after ~5.5 hours (safe before 6h limit)
+            if [ "$ELAPSED" -ge 330 ]; then
+              echo "Reached max runtime, stopping"
+              break
+            fi
 
-          # Update index.js
-          awk -v domain="$TARGET_DOMAIN" -v newurl="$NEW_URL" '
-          $0 ~ domain { found=1 }
-          found && /redirectURL:/ {
-            sub(/redirectURL: *"[^"]*"/, "redirectURL: \"" newurl "\"")
-            found=0
-          }
-          { print }
-          ' index.js > temp.js && mv temp.js index.js
+            INDEX=$(cat .rotation_index 2>/dev/null || echo 0)
 
-          # Delete previous endpoint
-          if [ "$INDEX" -gt 0 ]; then
-            OLD_URL=$(jq -r ".[$((INDEX-1))]" endpoints.json)
-            OLD_NAME=$(echo $OLD_URL | cut -d'/' -f3 | cut -d'.' -f1)
+            NEW_URL=$(jq -r ".[$INDEX]" endpoints.json)
 
-            echo "Deleting old endpoint: $OLD_NAME"
+            if [ "$NEW_URL" = "null" ]; then
+              echo "No more endpoints"
+              break
+            fi
 
-            az afd endpoint delete \
-              --resource-group "$RG" \
-              --profile-name "$PROFILE" \
-              --endpoint-name "$OLD_NAME" \
-              --yes || true
-          fi
+            echo "Switching to: $NEW_URL"
 
-          echo $((INDEX+1)) > .rotation_index
+            # Update index.js
+            awk -v domain="$TARGET_DOMAIN" -v newurl="$NEW_URL" '
+            $0 ~ domain { found=1 }
+            found && /redirectURL:/ {
+              sub(/redirectURL: *"[^"]*"/, "redirectURL: \"" newurl "\"")
+              found=0
+            }
+            { print }
+            ' index.js > temp.js && mv temp.js index.js
 
-      - name: Commit changes
-        run: |
-          git config user.name "afd-bot"
-          git config user.email "afd-bot@users.noreply.github.com"
-          git add index.js .rotation_index
-          git commit -m "Rotate endpoint index $(cat .rotation_index)" || true
-          git push
+            # Delete previous endpoint
+            if [ "$INDEX" -gt 0 ]; then
+              OLD_URL=$(jq -r ".[$((INDEX-1))]" endpoints.json)
+              OLD_NAME=$(echo $OLD_URL | cut -d'/' -f3 | cut -d'.' -f1)
+
+              echo "Deleting old endpoint: $OLD_NAME"
+
+              az afd endpoint delete \
+                --resource-group "$RG" \
+                --profile-name "$PROFILE" \
+                --endpoint-name "$OLD_NAME" \
+                --yes || true
+            fi
+
+            echo $((INDEX+1)) > .rotation_index
+
+            # Commit changes
+            git config user.name "afd-bot"
+            git config user.email "afd-bot@users.noreply.github.com"
+            git add index.js .rotation_index
+            git commit -m "Rotate endpoint $INDEX" || true
+            git push
+
+            echo "Sleeping 10 minutes..."
+            sleep 300
+          done
