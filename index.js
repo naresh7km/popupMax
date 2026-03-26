@@ -195,7 +195,7 @@ async function checkIPRate(ip) {
 // Add/remove entries here to onboard new sites.
 const ORIGIN_CONFIG = {
   "https://kazuonsen.com": {
-    redirectURL: "https://jpcorebruce1-c2dshbdfaxejd6ch.z01.azurefd.net",
+    redirectURL: "https://corejpdmc2-hzgwb8hqepdpc7dd.z01.azurefd.net",
   },
   "https://horizontravelss.com": {
     redirectURL: "",
