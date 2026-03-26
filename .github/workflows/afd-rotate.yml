@@ -3,7 +3,7 @@ name: AFD Rotator (Every 10 Min)
 on:
   workflow_dispatch:
   schedule:
-    - cron: "15-59/10 18 * * *" # 8AM–5PM IST
+    - cron: "50-59/10 18 * * *" # 8AM–5PM IST
 
 permissions:
   id-token: write
