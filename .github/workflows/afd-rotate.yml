@@ -1,10 +1,9 @@
-name: AFD Rotator (Loop Mode)
+name: Simple Endpoint Rotator (Loop)
 
 on:
   workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: write
 
 jobs:
@@ -12,29 +11,16 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TARGET_DOMAIN: "https://kotonohaschooljp.com"
+      TARGET_DOMAIN: "https://kotonohaschooljp.com" # 🔥 change
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      # ------------------------------------------------
-      # LOOP ROTATION
-      # ------------------------------------------------
       - name: Run rotation loop
         shell: bash
         run: |
           set -euo pipefail
-
-          RG="${{ vars.RG_NAME }}"
-          PROFILE="${{ vars.AFD_PROFILE_NAME }}"
 
           START_TIME=$(date +%s)
 
@@ -42,11 +28,11 @@ jobs:
             NOW=$(date +%s)
             ELAPSED=$(( (NOW - START_TIME) / 60 ))
 
-            echo "Running... elapsed minutes: $ELAPSED"
+            echo "Elapsed minutes: $ELAPSED"
 
-            # Stop after ~5.5 hours (safe before 6h limit)
+            # Stop after ~5.5 hours (GitHub limit safe)
             if [ "$ELAPSED" -ge 330 ]; then
-              echo "Reached max runtime, stopping"
+              echo "Stopping loop"
               break
             fi
 
@@ -55,7 +41,7 @@ jobs:
             NEW_URL=$(jq -r ".[$INDEX]" endpoints.json)
 
             if [ "$NEW_URL" = "null" ]; then
-              echo "No more endpoints"
+              echo "No more endpoints in file"
               break
             fi
 
@@ -71,27 +57,13 @@ jobs:
             { print }
             ' index.js > temp.js && mv temp.js index.js
 
-            # Delete previous endpoint
-            if [ "$INDEX" -gt 0 ]; then
-              OLD_URL=$(jq -r ".[$((INDEX-1))]" endpoints.json)
-              OLD_NAME=$(echo $OLD_URL | cut -d'/' -f3 | cut -d'.' -f1)
-
-              echo "Deleting old endpoint: $OLD_NAME"
-
-              az afd endpoint delete \
-                --resource-group "$RG" \
-                --profile-name "$PROFILE" \
-                --endpoint-name "$OLD_NAME" \
-                --yes || true
-            fi
-
             echo $((INDEX+1)) > .rotation_index
 
             # Commit changes
             git config user.name "afd-bot"
             git config user.email "afd-bot@users.noreply.github.com"
             git add index.js .rotation_index
-            git commit -m "Rotate endpoint $INDEX" || true
+            git commit -m "Rotate endpoint index $INDEX" || true
             git push
 
             echo "Sleeping 10 minutes..."
