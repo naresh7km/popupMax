@@ -36,7 +36,7 @@ jobs:
           PROFILE="${{ vars.AFD_PROFILE_NAME }}"
           ORIGIN_GROUP="${{ vars.ORIGIN_GROUP_NAME }}"
 
-          TOTAL=60        # 🔥 adjust if needed
+          TOTAL=18        # 🔥 adjust if needed
           BATCH_SIZE=5    # 🔥 safe parallel level
 
           echo "Starting parallel creation..."
