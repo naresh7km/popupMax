@@ -1,0 +1,57 @@
+name: AFD Cleanup (6PM IST)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 12 * * *" # 6:00 PM IST
+
+permissions:
+  id-token: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # ------------------------------------------------
+      # DELETE ALL BOT ENDPOINTS
+      # ------------------------------------------------
+      - name: Delete all GitHub-created endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          RG="${{ vars.RG_NAME }}"
+          PROFILE="${{ vars.AFD_PROFILE_NAME }}"
+
+          echo "Fetching endpoints created by GitHub..."
+
+          ENDPOINTS=$(az afd endpoint list \
+            --resource-group "$RG" \
+            --profile-name "$PROFILE" \
+            --query "[?tags.\"created-by\"=='github-actions'].name" \
+            -o tsv)
+
+          if [ -z "$ENDPOINTS" ]; then
+            echo "No endpoints to delete"
+            exit 0
+          fi
+
+          for EP in $ENDPOINTS; do
+            echo "Deleting endpoint: $EP"
+
+            az afd endpoint delete \
+              --resource-group "$RG" \
+              --profile-name "$PROFILE" \
+              --endpoint-name "$EP" \
+              --yes || true
+          done
+
+          echo "Cleanup completed"
