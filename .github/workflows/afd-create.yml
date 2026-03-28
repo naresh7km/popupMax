@@ -1,4 +1,4 @@
-name: AFD Endpoint Creator (Parallel - 5AM IST)
+name: AFD Endpoint Creator (Parallel + WAF - 5AM IST)
 
 on:
   workflow_dispatch:
@@ -25,7 +25,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       # ------------------------------------------------
-      # PARALLEL ENDPOINT CREATION
+      # PARALLEL ENDPOINT CREATION + WAF ATTACH
       # ------------------------------------------------
       - name: Create endpoints in parallel
         shell: bash
@@ -36,8 +36,10 @@ jobs:
           PROFILE="${{ vars.AFD_PROFILE_NAME }}"
           ORIGIN_GROUP="${{ vars.ORIGIN_GROUP_NAME }}"
 
-          TOTAL=20        # 🔥 adjust if needed
-          BATCH_SIZE=5    # 🔥 safe parallel level
+          SECURITY_POLICY_NAME="GateGuardSecurity"  # 🔥 PUT YOUR POLICY NAME HERE
+
+          TOTAL=20
+          BATCH_SIZE=5
 
           echo "Starting parallel creation..."
           echo "Total: $TOTAL | Batch size: $BATCH_SIZE"
@@ -70,6 +72,28 @@ jobs:
               --link-to-default-domain Enabled \
               --patterns-to-match "/*"
 
+            # 🔥 GET ENDPOINT ID
+            ENDPOINT_ID=$(az afd endpoint show \
+              --resource-group "$RG" \
+              --profile-name "$PROFILE" \
+              --endpoint-name "$NAME" \
+              --query id -o tsv)
+
+            # 🔥 GET EXISTING DOMAINS IN WAF POLICY
+            EXISTING_DOMAINS=$(az afd security-policy show \
+              --resource-group "$RG" \
+              --profile-name "$PROFILE" \
+              --security-policy-name "$SECURITY_POLICY_NAME" \
+              --query "parameters.wafPolicy.domains[].id" \
+              -o tsv)
+
+            # 🔥 ATTACH NEW ENDPOINT TO WAF
+            az afd security-policy update \
+              --resource-group "$RG" \
+              --profile-name "$PROFILE" \
+              --security-policy-name "$SECURITY_POLICY_NAME" \
+              --domains $EXISTING_DOMAINS $ENDPOINT_ID
+
             HOST=$(az afd endpoint show \
               --resource-group "$RG" \
               --profile-name "$PROFILE" \
@@ -80,12 +104,10 @@ jobs:
           }
 
           export -f create_endpoint
-          export RG PROFILE ORIGIN_GROUP
+          export RG PROFILE ORIGIN_GROUP SECURITY_POLICY_NAME
 
-          # 🔥 Run in parallel
           seq $TOTAL | xargs -n 1 -P $BATCH_SIZE -I {} bash -c 'create_endpoint'
 
-          # Convert to JSON
           jq -R . endpoints.txt | jq -s . > endpoints.json
 
       # ------------------------------------------------
@@ -102,5 +124,5 @@ jobs:
           git config user.name "afd-bot"
           git config user.email "afd-bot@users.noreply.github.com"
           git add endpoints.json .rotation_index
-          git commit -m "Daily endpoint batch (parallel)" || true
+          git commit -m "Daily endpoint batch (parallel + WAF)" || true
           git push
