@@ -1,4 +1,4 @@
-name: AFD Cleanup (6PM IST)
+name: AFD Cleanup (6PM IST - Detach WAF + Delete)
 
 on:
   workflow_dispatch:
@@ -21,15 +21,16 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       # ------------------------------------------------
-      # DELETE ALL BOT ENDPOINTS
+      # DETACH WAF + DELETE ENDPOINTS
       # ------------------------------------------------
-      - name: Delete all GitHub-created endpoints
+      - name: Detach WAF and delete endpoints
         shell: bash
         run: |
           set -euo pipefail
 
           RG="${{ vars.RG_NAME }}"
           PROFILE="${{ vars.AFD_PROFILE_NAME }}"
+          SECURITY_POLICY_NAME="GateGuardSecurity"  # 🔥 PUT YOUR POLICY NAME
 
           echo "Fetching endpoints created by GitHub..."
 
@@ -40,10 +41,47 @@ jobs:
             -o tsv)
 
           if [ -z "$ENDPOINTS" ]; then
-            echo "No endpoints to delete"
+            echo "No endpoints to process"
             exit 0
           fi
 
+          # 🔥 Get current domains list once
+          CURRENT_DOMAINS=$(az afd security-policy show \
+            --resource-group "$RG" \
+            --profile-name "$PROFILE" \
+            --security-policy-name "$SECURITY_POLICY_NAME" \
+            --query "parameters.wafPolicy.domains[].id" \
+            -o tsv)
+
+          UPDATED_DOMAINS="$CURRENT_DOMAINS"
+
+          for EP in $ENDPOINTS; do
+            echo "Processing endpoint: $EP"
+
+            EP_ID=$(az afd endpoint show \
+              --resource-group "$RG" \
+              --profile-name "$PROFILE" \
+              --endpoint-name "$EP" \
+              --query id -o tsv)
+
+            # Remove this endpoint from domains list
+            UPDATED_DOMAINS=$(echo "$UPDATED_DOMAINS" | grep -v "$EP_ID" || true)
+          done
+
+          # 🔥 Update WAF once (clean list)
+          if [ -n "$UPDATED_DOMAINS" ]; then
+            echo "Updating WAF policy (detaching endpoints)..."
+
+            az afd security-policy update \
+              --resource-group "$RG" \
+              --profile-name "$PROFILE" \
+              --security-policy-name "$SECURITY_POLICY_NAME" \
+              --domains $UPDATED_DOMAINS
+          else
+            echo "No domains left after cleanup"
+          fi
+
+          # 🔥 Now delete endpoints
           for EP in $ENDPOINTS; do
             echo "Deleting endpoint: $EP"
 
