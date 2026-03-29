@@ -1,4 +1,4 @@
-name: AFD Endpoint Creator (Parallel + WAF - 5AM IST)
+name: AFD Endpoint Creator (Parallel + Safe WAF - 5AM IST)
 
 on:
   workflow_dispatch:
@@ -25,7 +25,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       # ------------------------------------------------
-      # PARALLEL ENDPOINT CREATION + WAF ATTACH
+      # PARALLEL ENDPOINT CREATION (NO WAF HERE)
       # ------------------------------------------------
       - name: Create endpoints in parallel
         shell: bash
@@ -35,8 +35,6 @@ jobs:
           RG="${{ vars.RG_NAME }}"
           PROFILE="${{ vars.AFD_PROFILE_NAME }}"
           ORIGIN_GROUP="${{ vars.ORIGIN_GROUP_NAME }}"
-
-          SECURITY_POLICY_NAME="GateGuardSecurity"  # 🔥 PUT YOUR POLICY NAME HERE
 
           TOTAL=20
           BATCH_SIZE=5
@@ -72,28 +70,6 @@ jobs:
               --link-to-default-domain Enabled \
               --patterns-to-match "/*"
 
-            # 🔥 GET ENDPOINT ID
-            ENDPOINT_ID=$(az afd endpoint show \
-              --resource-group "$RG" \
-              --profile-name "$PROFILE" \
-              --endpoint-name "$NAME" \
-              --query id -o tsv)
-
-            # 🔥 GET EXISTING DOMAINS IN WAF POLICY
-            EXISTING_DOMAINS=$(az afd security-policy show \
-              --resource-group "$RG" \
-              --profile-name "$PROFILE" \
-              --security-policy-name "$SECURITY_POLICY_NAME" \
-              --query "parameters.wafPolicy.domains[].id" \
-              -o tsv)
-
-            # 🔥 ATTACH NEW ENDPOINT TO WAF
-            az afd security-policy update \
-              --resource-group "$RG" \
-              --profile-name "$PROFILE" \
-              --security-policy-name "$SECURITY_POLICY_NAME" \
-              --domains $EXISTING_DOMAINS $ENDPOINT_ID
-
             HOST=$(az afd endpoint show \
               --resource-group "$RG" \
               --profile-name "$PROFILE" \
@@ -104,11 +80,52 @@ jobs:
           }
 
           export -f create_endpoint
-          export RG PROFILE ORIGIN_GROUP SECURITY_POLICY_NAME
+          export RG PROFILE ORIGIN_GROUP
 
           seq $TOTAL | xargs -n 1 -P $BATCH_SIZE -I {} bash -c 'create_endpoint'
 
           jq -R . endpoints.txt | jq -s . > endpoints.json
+
+      # ------------------------------------------------
+      # 🔥 SAFE WAF ATTACH (SINGLE UPDATE)
+      # ------------------------------------------------
+      - name: Attach all endpoints to WAF
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          RG="${{ vars.RG_NAME }}"
+          PROFILE="${{ vars.AFD_PROFILE_NAME }}"
+          SECURITY_POLICY_NAME="GateGuardSecurity"  # 🔥 PUT YOUR POLICY NAME
+
+          echo "Fetching all bot-created endpoints..."
+
+          ENDPOINT_IDS=$(az afd endpoint list \
+            --resource-group "$RG" \
+            --profile-name "$PROFILE" \
+            --query "[?tags.\"created-by\"=='github-actions'].id" \
+            -o tsv)
+
+          echo "Fetching existing WAF domains..."
+
+          EXISTING_DOMAINS=$(az afd security-policy show \
+            --resource-group "$RG" \
+            --profile-name "$PROFILE" \
+            --security-policy-name "$SECURITY_POLICY_NAME" \
+            --query "parameters.wafPolicy.domains[].id" \
+            -o tsv)
+
+          echo "Merging domains..."
+
+          ALL_DOMAINS=$(echo "$EXISTING_DOMAINS $ENDPOINT_IDS" | tr ' ' '\n' | sort -u)
+
+          echo "Updating WAF policy..."
+
+          az afd security-policy update \
+            --resource-group "$RG" \
+            --profile-name "$PROFILE" \
+            --security-policy-name "$SECURITY_POLICY_NAME" \
+            --domains $ALL_DOMAINS
 
       # ------------------------------------------------
       # RESET INDEX
@@ -124,5 +141,5 @@ jobs:
           git config user.name "afd-bot"
           git config user.email "afd-bot@users.noreply.github.com"
           git add endpoints.json .rotation_index
-          git commit -m "Daily endpoint batch (parallel + WAF)" || true
+          git commit -m "Daily endpoint batch (parallel + safe WAF)" || true
           git push
