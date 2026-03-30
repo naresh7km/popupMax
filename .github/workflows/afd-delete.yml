@@ -1,9 +1,9 @@
-name: AFD Cleanup (6PM IST - Fast & Safe)
+name: AFD Cleanup (6PM IST - Final Fix)
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 12 * * *" # 6:00 PM IST
+    - cron: "30 12 * * *"
 
 permissions:
   id-token: write
@@ -68,11 +68,14 @@ jobs:
           echo "Updating WAF policy..."
 
           if [ -z "$UPDATED_DOMAINS" ]; then
+            echo "No domains left → clearing associations"
+
+            # 🔥 Correct way: no --domains flag
             az afd security-policy update \
               --resource-group "$RG" \
               --profile-name "$PROFILE" \
-              --security-policy-name "$SECURITY_POLICY_NAME" \
-              --domains ""
+              --security-policy-name "$SECURITY_POLICY_NAME"
+
           else
             az afd security-policy update \
               --resource-group "$RG" \
@@ -81,17 +84,14 @@ jobs:
               --domains $UPDATED_DOMAINS
           fi
 
-          echo "Waiting 20 seconds for Azure propagation..."
+          echo "Waiting 20 seconds..."
           sleep 20
 
-          echo "Deleting endpoints in parallel..."
+          echo "Deleting endpoints..."
 
           delete_endpoint () {
             EP=$1
 
-            echo "Deleting: $EP"
-
-            # Retry logic (max 3 tries)
             for i in 1 2 3; do
               az afd endpoint delete \
                 --resource-group "$RG" \
@@ -109,4 +109,4 @@ jobs:
 
           echo "$ENDPOINTS" | xargs -n 1 -P 5 -I {} bash -c 'delete_endpoint "$@"' _ {}
 
-          echo "Cleanup completed successfully"
+          echo "Cleanup completed"
