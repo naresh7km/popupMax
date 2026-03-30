@@ -1,9 +1,9 @@
-name: AFD Cleanup (6PM IST - FINAL WORKING)
+name: AFD Cleanup (6PM IST - Detach WAF + Delete)
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 12 * * *"
+    - cron: "30 12 * * *" # 6:00 PM IST
 
 permissions:
   id-token: write
@@ -20,16 +20,19 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Detach WAF and delete endpoints (safe loop)
+      # ------------------------------------------------
+      # DETACH WAF + DELETE ENDPOINTS
+      # ------------------------------------------------
+      - name: Detach WAF and delete endpoints
         shell: bash
         run: |
           set -euo pipefail
 
           RG="${{ vars.RG_NAME }}"
           PROFILE="${{ vars.AFD_PROFILE_NAME }}"
-          POLICY="GateGuardSecurity"
+          SECURITY_POLICY_NAME="GateGuardSecurity"  # 🔥 PUT YOUR POLICY NAME
 
-          echo "Fetching endpoints..."
+          echo "Fetching endpoints created by GitHub..."
 
           ENDPOINTS=$(az afd endpoint list \
             --resource-group "$RG" \
@@ -38,13 +41,22 @@ jobs:
             -o tsv)
 
           if [ -z "$ENDPOINTS" ]; then
-            echo "No endpoints found"
+            echo "No endpoints to process"
             exit 0
           fi
 
+          # 🔥 Get current domains list once
+          CURRENT_DOMAINS=$(az afd security-policy show \
+            --resource-group "$RG" \
+            --profile-name "$PROFILE" \
+            --security-policy-name "$SECURITY_POLICY_NAME" \
+            --query "parameters.wafPolicy.domains[].id" \
+            -o tsv)
+
+          UPDATED_DOMAINS="$CURRENT_DOMAINS"
+
           for EP in $ENDPOINTS; do
-            echo "-----------------------------"
-            echo "Processing: $EP"
+            echo "Processing endpoint: $EP"
 
             EP_ID=$(az afd endpoint show \
               --resource-group "$RG" \
@@ -52,51 +64,32 @@ jobs:
               --endpoint-name "$EP" \
               --query id -o tsv)
 
-            echo "Getting current WAF domains..."
+            # Remove this endpoint from domains list
+            UPDATED_DOMAINS=$(echo "$UPDATED_DOMAINS" | grep -v "$EP_ID" || true)
+          done
 
-            CURRENT=$(az afd security-policy show \
+          # 🔥 Update WAF once (clean list)
+          if [ -n "$UPDATED_DOMAINS" ]; then
+            echo "Updating WAF policy (detaching endpoints)..."
+
+            az afd security-policy update \
               --resource-group "$RG" \
               --profile-name "$PROFILE" \
-              --security-policy-name "$POLICY" \
-              --query "parameters.wafPolicy.domains[].id" \
-              -o tsv)
+              --security-policy-name "$SECURITY_POLICY_NAME" \
+              --domains $UPDATED_DOMAINS
+          else
+            echo "No domains left after cleanup"
+          fi
 
-            NEW_DOMAINS=()
-
-            for d in $CURRENT; do
-              if [ "$d" != "$EP_ID" ]; then
-                NEW_DOMAINS+=("$d")
-              fi
-            done
-
-            # ⚠️ Azure requires at least ONE domain
-            if [ ${#NEW_DOMAINS[@]} -eq 0 ]; then
-              echo "Skipping WAF update (last domain cannot be removed)"
-            else
-              echo "Updating WAF without $EP..."
-
-              az afd security-policy update \
-                --resource-group "$RG" \
-                --profile-name "$PROFILE" \
-                --security-policy-name "$POLICY" \
-                --domains "${NEW_DOMAINS[@]}"
-            fi
-
-            echo "Waiting for propagation..."
-            sleep 30
-
+          # 🔥 Now delete endpoints
+          for EP in $ENDPOINTS; do
             echo "Deleting endpoint: $EP"
 
-            for i in 1 2 3 4; do
-              az afd endpoint delete \
-                --resource-group "$RG" \
-                --profile-name "$PROFILE" \
-                --endpoint-name "$EP" \
-                --yes && break
-
-              echo "Retry $i..."
-              sleep 10
-            done
+            az afd endpoint delete \
+              --resource-group "$RG" \
+              --profile-name "$PROFILE" \
+              --endpoint-name "$EP" \
+              --yes || true
           done
 
           echo "Cleanup completed"
