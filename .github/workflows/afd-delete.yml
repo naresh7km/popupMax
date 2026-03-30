@@ -1,4 +1,4 @@
-name: AFD Cleanup (6PM IST - Final Fix)
+name: AFD Cleanup (6PM IST - FINAL FIX)
 
 on:
   workflow_dispatch:
@@ -27,10 +27,9 @@ jobs:
 
           RG="${{ vars.RG_NAME }}"
           PROFILE="${{ vars.AFD_PROFILE_NAME }}"
-          SECURITY_POLICY_NAME="GateGuardSecurity"
+          POLICY="GateGuardSecurity"
 
-          echo "Fetching bot endpoints..."
-
+          echo "Fetching endpoints..."
           ENDPOINTS=$(az afd endpoint list \
             --resource-group "$RG" \
             --profile-name "$PROFILE" \
@@ -44,55 +43,65 @@ jobs:
 
           echo "Fetching current WAF domains..."
 
-          CURRENT_DOMAINS=$(az afd security-policy show \
+          CURRENT=$(az afd security-policy show \
             --resource-group "$RG" \
             --profile-name "$PROFILE" \
-            --security-policy-name "$SECURITY_POLICY_NAME" \
+            --security-policy-name "$POLICY" \
             --query "parameters.wafPolicy.domains[].id" \
             -o tsv)
 
-          UPDATED_DOMAINS="$CURRENT_DOMAINS"
+          # Convert to array
+          DOMAINS=()
+          for d in $CURRENT; do
+            DOMAINS+=("$d")
+          done
+
+          echo "Filtering out bot endpoints..."
 
           for EP in $ENDPOINTS; do
-            echo "Processing endpoint: $EP"
-
             EP_ID=$(az afd endpoint show \
               --resource-group "$RG" \
               --profile-name "$PROFILE" \
               --endpoint-name "$EP" \
               --query id -o tsv)
 
-            UPDATED_DOMAINS=$(echo "$UPDATED_DOMAINS" | grep -v "$EP_ID" || true)
+            NEW_DOMAINS=()
+            for d in "${DOMAINS[@]}"; do
+              if [ "$d" != "$EP_ID" ]; then
+                NEW_DOMAINS+=("$d")
+              fi
+            done
+            DOMAINS=("${NEW_DOMAINS[@]}")
           done
+
+          echo "Final domains to keep:"
+          printf "%s\n" "${DOMAINS[@]}"
 
           echo "Updating WAF policy..."
 
-          if [ -z "$UPDATED_DOMAINS" ]; then
-            echo "No domains left → clearing associations"
-
-            # 🔥 Correct way: no --domains flag
+          if [ ${#DOMAINS[@]} -eq 0 ]; then
             az afd security-policy update \
               --resource-group "$RG" \
               --profile-name "$PROFILE" \
-              --security-policy-name "$SECURITY_POLICY_NAME"
-
+              --security-policy-name "$POLICY" \
+              --domains
           else
             az afd security-policy update \
               --resource-group "$RG" \
               --profile-name "$PROFILE" \
-              --security-policy-name "$SECURITY_POLICY_NAME" \
-              --domains $UPDATED_DOMAINS
+              --security-policy-name "$POLICY" \
+              --domains "${DOMAINS[@]}"
           fi
 
-          echo "Waiting 20 seconds..."
-          sleep 20
+          echo "Waiting for Azure propagation (IMPORTANT)..."
+          sleep 60
 
           echo "Deleting endpoints..."
 
-          delete_endpoint () {
+          delete_ep () {
             EP=$1
 
-            for i in 1 2 3; do
+            for i in 1 2 3 4 5; do
               az afd endpoint delete \
                 --resource-group "$RG" \
                 --profile-name "$PROFILE" \
@@ -100,13 +109,13 @@ jobs:
                 --yes && break
 
               echo "Retry $i for $EP..."
-              sleep 5
+              sleep 10
             done
           }
 
-          export -f delete_endpoint
+          export -f delete_ep
           export RG PROFILE
 
-          echo "$ENDPOINTS" | xargs -n 1 -P 5 -I {} bash -c 'delete_endpoint "$@"' _ {}
+          echo "$ENDPOINTS" | xargs -n 1 -P 4 -I {} bash -c 'delete_ep "$@"' _ {}
 
           echo "Cleanup completed"
