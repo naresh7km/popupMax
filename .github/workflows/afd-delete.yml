@@ -1,4 +1,4 @@
-name: AFD Cleanup (6PM IST - FINAL FIX)
+name: AFD Cleanup (6PM IST - FINAL WORKING)
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Detach WAF and delete endpoints
+      - name: Detach WAF and delete endpoints (safe loop)
         shell: bash
         run: |
           set -euo pipefail
@@ -30,6 +30,7 @@ jobs:
           POLICY="GateGuardSecurity"
 
           echo "Fetching endpoints..."
+
           ENDPOINTS=$(az afd endpoint list \
             --resource-group "$RG" \
             --profile-name "$PROFILE" \
@@ -41,81 +42,61 @@ jobs:
             exit 0
           fi
 
-          echo "Fetching current WAF domains..."
-
-          CURRENT=$(az afd security-policy show \
-            --resource-group "$RG" \
-            --profile-name "$PROFILE" \
-            --security-policy-name "$POLICY" \
-            --query "parameters.wafPolicy.domains[].id" \
-            -o tsv)
-
-          # Convert to array
-          DOMAINS=()
-          for d in $CURRENT; do
-            DOMAINS+=("$d")
-          done
-
-          echo "Filtering out bot endpoints..."
-
           for EP in $ENDPOINTS; do
+            echo "-----------------------------"
+            echo "Processing: $EP"
+
             EP_ID=$(az afd endpoint show \
               --resource-group "$RG" \
               --profile-name "$PROFILE" \
               --endpoint-name "$EP" \
               --query id -o tsv)
 
+            echo "Getting current WAF domains..."
+
+            CURRENT=$(az afd security-policy show \
+              --resource-group "$RG" \
+              --profile-name "$PROFILE" \
+              --security-policy-name "$POLICY" \
+              --query "parameters.wafPolicy.domains[].id" \
+              -o tsv)
+
             NEW_DOMAINS=()
-            for d in "${DOMAINS[@]}"; do
+
+            for d in $CURRENT; do
               if [ "$d" != "$EP_ID" ]; then
                 NEW_DOMAINS+=("$d")
               fi
             done
-            DOMAINS=("${NEW_DOMAINS[@]}")
-          done
 
-          echo "Final domains to keep:"
-          printf "%s\n" "${DOMAINS[@]}"
+            # ⚠️ Azure requires at least ONE domain
+            if [ ${#NEW_DOMAINS[@]} -eq 0 ]; then
+              echo "Skipping WAF update (last domain cannot be removed)"
+            else
+              echo "Updating WAF without $EP..."
 
-          echo "Updating WAF policy..."
+              az afd security-policy update \
+                --resource-group "$RG" \
+                --profile-name "$PROFILE" \
+                --security-policy-name "$POLICY" \
+                --domains "${NEW_DOMAINS[@]}"
+            fi
 
-          if [ ${#DOMAINS[@]} -eq 0 ]; then
-            az afd security-policy update \
-              --resource-group "$RG" \
-              --profile-name "$PROFILE" \
-              --security-policy-name "$POLICY" \
-              --domains
-          else
-            az afd security-policy update \
-              --resource-group "$RG" \
-              --profile-name "$PROFILE" \
-              --security-policy-name "$POLICY" \
-              --domains "${DOMAINS[@]}"
-          fi
+            echo "Waiting for propagation..."
+            sleep 30
 
-          echo "Waiting for Azure propagation (IMPORTANT)..."
-          sleep 60
+            echo "Deleting endpoint: $EP"
 
-          echo "Deleting endpoints..."
-
-          delete_ep () {
-            EP=$1
-
-            for i in 1 2 3 4 5; do
+            for i in 1 2 3 4; do
               az afd endpoint delete \
                 --resource-group "$RG" \
                 --profile-name "$PROFILE" \
                 --endpoint-name "$EP" \
                 --yes && break
 
-              echo "Retry $i for $EP..."
+              echo "Retry $i..."
               sleep 10
             done
-          }
-
-          export -f delete_ep
-          export RG PROFILE
-
-          echo "$ENDPOINTS" | xargs -n 1 -P 4 -I {} bash -c 'delete_ep "$@"' _ {}
+          done
 
           echo "Cleanup completed"
