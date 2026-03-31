@@ -66,6 +66,6 @@ jobs:
             git commit -m "Rotate endpoint index $INDEX" || true
             git push
 
-            echo "Sleeping 10 minutes..."
-            sleep 600
+            echo "Sleeping 5 minutes..."
+            sleep 300
           done
