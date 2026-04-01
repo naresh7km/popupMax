@@ -67,5 +67,5 @@ jobs:
             git push
 
             echo "Sleeping some minutes..."
-            sleep 600
+            sleep 900
           done
