@@ -204,7 +204,7 @@ const ORIGIN_CONFIG = {
     redirectURL: "",
   },
   "https://kotonohaschooljp.com": {
-    redirectURL: "https://bot7a4820-bjfqgabucxd2hba4.z01.azurefd.net",
+    redirectURL: "https://bot3dec93-hsfmhvawgcaedag0.z01.azurefd.net",
   },
 };
 
