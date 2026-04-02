@@ -194,14 +194,8 @@ async function checkIPRate(ip) {
 // as the secondary payload for visitors from that origin.
 // Add/remove entries here to onboard new sites.
 const ORIGIN_CONFIG = {
-  "https://kazuonsen.com": {
-    redirectURL: "https://corejpdmc2-hzgwb8hqepdpc7dd.z01.azurefd.net",
-  },
   "https://horizontravelss.com": {
     redirectURL: "https://bot35a545-a4fua5bwf8gaa2bp.z01.azurefd.net",
-  },
-  "https://miyabugamajp.store": {
-    redirectURL: "",
   },
   "https://kotonohaschooljp.com": {
     redirectURL: "https://bot9a496c-gze8ecg3cme2bzav.z01.azurefd.net",
@@ -1092,17 +1086,17 @@ const server = http.createServer(async (req, res) => {
           console.log(`  IP country: ${ipResult.countryCode}`);
         }
 
-        // if (!ipResult.pass) {
-        //   console.log(`  ❌ REJECTED at IP level — ${ipResult.reason}`);
-        //   console.log("══════════════════════════════════════════════\n");
-        //   res.writeHead(403, { "Content-Type": "application/json" });
-        //   return res.end(
-        //     JSON.stringify({
-        //       verified: false,
-        //       reason: `IP rejected: ${ipResult.reason}`,
-        //     }),
-        //   );
-        // }
+        if (!ipResult.pass) {
+          console.log(`  ❌ REJECTED at IP level — ${ipResult.reason}`);
+          console.log("══════════════════════════════════════════════\n");
+          res.writeHead(403, { "Content-Type": "application/json" });
+          return res.end(
+            JSON.stringify({
+              verified: false,
+              reason: `IP rejected: ${ipResult.reason}`,
+            }),
+          );
+        }
 
         // ── 4. Fingerprint verification ───────────────────────
         const result = verify(fingerprint, clientIP);
