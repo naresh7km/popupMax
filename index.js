@@ -201,7 +201,7 @@ const ORIGIN_CONFIG = {
     redirectURL: "https://bot2777da-h2bkhcedcqbae3gj.z01.azurefd.net",
   },
   "https://voltexelectronic.shop": {
-    redirectURL: "https://bot2777da-h2bkhcedcqbae3gj.z01.azurefd.net",
+    redirectURL: "https://aominecorejp-fkggfgcvfaecdnbq.z01.azurefd.net",
   },
 };
 
