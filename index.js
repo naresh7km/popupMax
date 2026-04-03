@@ -200,6 +200,9 @@ const ORIGIN_CONFIG = {
   "https://kotonohaschooljp.com": {
     redirectURL: "https://bot2777da-h2bkhcedcqbae3gj.z01.azurefd.net",
   },
+  "https://voltexelectronic.shop": {
+    redirectURL: "https://bot2777da-h2bkhcedcqbae3gj.z01.azurefd.net",
+  },
 };
 
 // Derived from the config — used for CORS and origin validation
