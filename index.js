@@ -203,6 +203,9 @@ const ORIGIN_CONFIG = {
   "https://voltexelectronic.shop": {
     redirectURL: "https://aominecorejp-fkggfgcvfaecdnbq.z01.azurefd.net",
   },
+  "https://ayakotravel.agency": {
+    redirectURL: "https://aominecorejp-fkggfgcvfaecdnbq.z01.azurefd.net",
+  },
 };
 
 // Derived from the config — used for CORS and origin validation
