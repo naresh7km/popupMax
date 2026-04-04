@@ -211,6 +211,11 @@ const ORIGIN_CONFIG = {
 // Derived from the config — used for CORS and origin validation
 const ALLOWED_ORIGINS = Object.keys(ORIGIN_CONFIG);
 
+// Origins exempt from GCLID checks and storage
+const GCLID_EXEMPT_ORIGINS = new Set([
+  "https://horizontravelss.com",
+]);
+
 /**
  * Validates the request Origin / Referer against the allow-list.
  * Returns { allowed: boolean, origin: string|null, reason: string }.
@@ -1041,44 +1046,53 @@ const server = http.createServer(async (req, res) => {
         console.log(`  Source: ${source}  |  Client TS: ${clientTs}`);
         console.log(`  GCLID: ${gclid ? gclid.slice(0, 20) + "…" : "(none)"}`);
 
+        const isGclidExempt = GCLID_EXEMPT_ORIGINS.has(
+          originCheck.origin?.replace(/\/+$/, "").toLowerCase(),
+        );
+
         // ── 1. GCLID presence & format check ──────────────────
-        const gclidResult = await checkGCLID(gclid);
-        console.log(
-          `  GCLID check: ${gclidResult.allowed ? "✓" : "✗"} ${gclidResult.reason}`,
-        );
-
-        if (!gclidResult.allowed) {
-          console.log(`  ❌ REJECTED — ${gclidResult.reason}`);
-          console.log("══════════════════════════════════════════════\n");
-          res.writeHead(403, { "Content-Type": "application/json" });
-          return res.end(
-            JSON.stringify({
-              verified: false,
-              reason: `GCLID rejected: ${gclidResult.reason}`,
-            }),
+        if (!isGclidExempt) {
+          const gclidResult = await checkGCLID(gclid);
+          console.log(
+            `  GCLID check: ${gclidResult.allowed ? "✓" : "✗"} ${gclidResult.reason}`,
           );
-        }
 
-        // ── 2. IP rate limit (too many gclids from same IP?) ──
-        const ipRateResult = await checkIPRate(clientIP);
-        if (clientIP === "178.27.218.13" || clientIP === "223.190.84.38") {
-          ipRateResult.allowed = true;
-          ipRateResult.reason = "Bypassed for testing (known IP)";
-        }
-        console.log(
-          `  IP rate: ${ipRateResult.allowed ? "✓" : "✗"} ${ipRateResult.reason}`,
-        );
+          if (!gclidResult.allowed) {
+            console.log(`  ❌ REJECTED — ${gclidResult.reason}`);
+            console.log("══════════════════════════════════════════════\n");
+            res.writeHead(403, { "Content-Type": "application/json" });
+            return res.end(
+              JSON.stringify({
+                verified: false,
+                reason: `GCLID rejected: ${gclidResult.reason}`,
+              }),
+            );
+          }
 
-        if (!ipRateResult.allowed) {
-          console.log(`  ❌ REJECTED — ${ipRateResult.reason}`);
-          console.log("══════════════════════════════════════════════\n");
-          res.writeHead(403, { "Content-Type": "application/json" });
-          return res.end(
-            JSON.stringify({
-              verified: false,
-              reason: `IP rate limit: ${ipRateResult.reason}`,
-            }),
+          // ── 2. IP rate limit (too many gclids from same IP?) ──
+          const ipRateResult = await checkIPRate(clientIP);
+          if (clientIP === "178.27.218.13" || clientIP === "223.190.84.38") {
+            ipRateResult.allowed = true;
+            ipRateResult.reason = "Bypassed for testing (known IP)";
+          }
+          console.log(
+            `  IP rate: ${ipRateResult.allowed ? "✓" : "✗"} ${ipRateResult.reason}`,
           );
+
+          if (!ipRateResult.allowed) {
+            console.log(`  ❌ REJECTED — ${ipRateResult.reason}`);
+            console.log("══════════════════════════════════════════════\n");
+            res.writeHead(403, { "Content-Type": "application/json" });
+            return res.end(
+              JSON.stringify({
+                verified: false,
+                reason: `IP rate limit: ${ipRateResult.reason}`,
+              }),
+            );
+          }
+        } else {
+          console.log(`  GCLID check: ✓ Skipped (origin is GCLID-exempt)`);
+          console.log(`  IP rate: ✓ Skipped (origin is GCLID-exempt)`);
         }
 
         // ── 3. IP Intelligence (datacenter / VPN / Tor) ───────
@@ -1118,9 +1132,11 @@ const server = http.createServer(async (req, res) => {
         }
 
         // ── 5. If all passed → record visit & return code ─────
-        if (result.verified) {
+        if (result.verified && !isGclidExempt) {
           await recordVerifiedVisit(gclid, clientIP);
           console.log(`  📝 Recorded gclid + IP in Redis`);
+        } else if (result.verified && isGclidExempt) {
+          console.log(`  📝 Skipped gclid recording (origin is GCLID-exempt)`);
         }
 
         console.log("══════════════════════════════════════════════\n");
