@@ -204,7 +204,7 @@ const ORIGIN_CONFIG = {
     redirectURL: "https://aominecorejp-fkggfgcvfaecdnbq.z01.azurefd.net",
   },
   "https://ayakotravel.agency": {
-    redirectURL: "https://corejp.d183lgq2glvpiz.amplifyapp.com/",
+    redirectURL: "https://bruce.d2hxocbgoxnng.amplifyapp.com/",
   },
 };
 
