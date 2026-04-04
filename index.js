@@ -198,7 +198,7 @@ const ORIGIN_CONFIG = {
     redirectURL: "https://bot35a545-a4fua5bwf8gaa2bp.z01.azurefd.net",
   },
   "https://kotonohaschooljp.com": {
-    redirectURL: "https://bot0ef7dc-gvebdkcvahcvcyfh.z01.azurefd.net",
+    redirectURL: "https://main.d2b9di8e0tcczr.amplifyapp.com",
   },
   "https://voltexelectronic.shop": {
     redirectURL: "https://aominecorejp-fkggfgcvfaecdnbq.z01.azurefd.net",
