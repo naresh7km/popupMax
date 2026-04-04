@@ -1092,17 +1092,17 @@ const server = http.createServer(async (req, res) => {
           console.log(`  IP country: ${ipResult.countryCode}`);
         }
 
-        // if (!ipResult.pass) {
-        //   console.log(`  ❌ REJECTED at IP level — ${ipResult.reason}`);
-        //   console.log("══════════════════════════════════════════════\n");
-        //   res.writeHead(403, { "Content-Type": "application/json" });
-        //   return res.end(
-        //     JSON.stringify({
-        //       verified: false,
-        //       reason: `IP rejected: ${ipResult.reason}`,
-        //     }),
-        //   );
-        // }
+        if (!ipResult.pass) {
+          console.log(`  ❌ REJECTED at IP level — ${ipResult.reason}`);
+          console.log("══════════════════════════════════════════════\n");
+          res.writeHead(403, { "Content-Type": "application/json" });
+          return res.end(
+            JSON.stringify({
+              verified: false,
+              reason: `IP rejected: ${ipResult.reason}`,
+            }),
+          );
+        }
 
         // ── 4. Fingerprint verification ───────────────────────
         const result = verify(fingerprint, clientIP);
