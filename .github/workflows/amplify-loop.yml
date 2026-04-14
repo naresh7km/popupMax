@@ -3,6 +3,9 @@ name: Amplify Loop
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   run-loop:
     runs-on: ubuntu-latest
