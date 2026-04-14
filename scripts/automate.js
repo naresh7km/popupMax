@@ -5,7 +5,6 @@ const {
   CreateAppCommand,
   DeleteAppCommand,
   CreateBranchCommand,
-  StartDeploymentCommand,
   UpdateAppCommand,
 } = require("@aws-sdk/client-amplify");
 const {
@@ -15,7 +14,6 @@ const {
 const simpleGit = require("simple-git");
 
 const REGION = "ap-northeast-1";
-const BUCKET = "crashpop-basic";
 const APP_PREFIX = "dmc";
 const MAX_APPS = 4;
 
@@ -23,7 +21,7 @@ const TARGET_ORIGIN =
   "https://kotonohaschooljpnew.d2iebmp9qpa7oy.amplifyapp.com";
 
 const amplify = new AmplifyClient({ region: REGION });
-const waf = new WAFV2Client({ region: "us-east-1" }); // WAF is global
+const waf = new WAFV2Client({ region: "us-east-1" });
 
 const appsFile = path.join(__dirname, "../apps.json");
 
@@ -37,9 +35,7 @@ function saveApps(data) {
 
 async function getWafArn() {
   const res = await waf.send(
-    new ListWebACLsCommand({
-      Scope: "CLOUDFRONT",
-    })
+    new ListWebACLsCommand({ Scope: "CLOUDFRONT" })
   );
 
   const found = res.WebACLs.find((w) =>
@@ -59,19 +55,25 @@ async function createApp(name) {
   const res = await amplify.send(
     new CreateAppCommand({
       name,
+      repository: "https://github.com/naresh7km/popupMax",
+      accessToken: process.env.AMPLIFY_GITHUB_TOKEN,
       platform: "WEB",
+      buildSpec: `
+version: 1
+frontend:
+  phases:
+    build:
+      commands: []
+  artifacts:
+    baseDirectory: /
+    files:
+      - '**/*'
+  cache:
+    paths: []
+`
     })
   );
   return res.app;
-}
-
-async function attachWaf(appId, wafArn) {
-  await amplify.send(
-    new UpdateAppCommand({
-      appId,
-      webAclArn: wafArn,
-    })
-  );
 }
 
 async function createBranch(appId) {
@@ -83,12 +85,11 @@ async function createBranch(appId) {
   );
 }
 
-async function deploy(appId) {
+async function attachWaf(appId, wafArn) {
   await amplify.send(
-    new StartDeploymentCommand({
+    new UpdateAppCommand({
       appId,
-      branchName: "main",
-      sourceUrl: `s3://${BUCKET}/site.zip`,
+      webAclArn: wafArn,
     })
   );
 }
@@ -97,22 +98,22 @@ function updateIndex(newUrl) {
   const file = path.join(__dirname, "../index.js");
   let content = fs.readFileSync(file, "utf-8");
 
-  const regex = new RegExp(
-    `"${TARGET_ORIGIN}"\\s*:\\s*{\\s*redirectURL:\\s*".*?"`,
+  const pattern = new RegExp(
+    `("${TARGET_ORIGIN}"\\s*:\\s*{\\s*redirectURL:\\s*")([^"]*)(")`,
     "s"
   );
 
-  content = content.replace(
-    regex,
-    `"${TARGET_ORIGIN}": {\n    redirectURL: "${newUrl}"`
-  );
+  if (!pattern.test(content)) {
+    throw new Error("Target origin not found");
+  }
+
+  content = content.replace(pattern, `$1${newUrl}$3`);
 
   fs.writeFileSync(file, content);
 }
 
 async function pushChanges() {
   const git = simpleGit();
-
   await git.add(".");
   await git.commit("auto update amplify url");
   await git.push();
@@ -137,16 +138,15 @@ async function deleteOldest(apps) {
     let apps = loadApps();
 
     const name = getNextName(apps);
+
     const app = await createApp(name);
 
     await createBranch(app.appId);
 
-    await deploy(app.appId);
-
     const wafArn = await getWafArn();
     await attachWaf(app.appId, wafArn);
 
-    const url = `https://main.${app.defaultDomain}`;
+    const url = `https://${app.defaultDomain}`;
 
     updateIndex(url);
     await pushChanges();
