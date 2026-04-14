@@ -200,8 +200,8 @@ const ORIGIN_CONFIG = {
   "https://kotonohaschooljp.com": {
     redirectURL: "https://main.d2b9di8e0tcczr.amplifyapp.com",
   },
-  "https://voltexelectronic.shop": {
-    redirectURL: "https://aominecorejp-fkggfgcvfaecdnbq.z01.azurefd.net",
+  "https://voltexnew.d39rgowfflgou7.amplifyapp.com/": {
+    redirectURL: "https://user.d2z6vpn7lco2xg.amplifyapp.com",
   },
   "https://ayakotravel.agency": {
     redirectURL: "https://bruce.d2hxocbgoxnng.amplifyapp.com/",
