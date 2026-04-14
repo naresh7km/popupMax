@@ -88,7 +88,7 @@ async function deploy(appId) {
     new StartDeploymentCommand({
       appId,
       branchName: "main",
-      sourceUrl: `s3://${BUCKET}/site.zip`,
+      sourceUrl: `s3://${BUCKET}/`,
     })
   );
 }
