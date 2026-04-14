@@ -9,7 +9,7 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Setup Node
@@ -17,10 +17,14 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
-          npm init -y
           npm install @aws-sdk/client-amplify @aws-sdk/client-wafv2 simple-git
+
+      - name: Setup Git identity
+        run: |
+          git config --global user.email "bot@github.com"
+          git config --global user.name "github-actions-bot"
 
       - name: Run loop
         env:
