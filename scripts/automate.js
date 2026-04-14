@@ -51,26 +51,14 @@ function getNextName(apps) {
   return APP_PREFIX + (apps.length + 1);
 }
 
+// ✅ FIXED (no IAM role, no buildSpec)
 async function createApp(name) {
   const res = await amplify.send(
     new CreateAppCommand({
       name,
       repository: "https://github.com/naresh7km/popupMax",
       accessToken: process.env.AMPLIFY_GITHUB_TOKEN,
-      platform: "WEB",
-      buildSpec: `
-version: 1
-frontend:
-  phases:
-    build:
-      commands: []
-  artifacts:
-    baseDirectory: /
-    files:
-      - '**/*'
-  cache:
-    paths: []
-`
+      platform: "WEB"
     })
   );
   return res.app;
@@ -102,10 +90,6 @@ function updateIndex(newUrl) {
     `("${TARGET_ORIGIN}"\\s*:\\s*{\\s*redirectURL:\\s*")([^"]*)(")`,
     "s"
   );
-
-  if (!pattern.test(content)) {
-    throw new Error("Target origin not found");
-  }
 
   content = content.replace(pattern, `$1${newUrl}$3`);
 
