@@ -199,13 +199,13 @@ const ORIGIN_CONFIG = {
     redirectURL: "https://bot35a545-a4fua5bwf8gaa2bp.z01.azurefd.net",
   },
   "https://kotonohaschooljpnew.d2iebmp9qpa7oy.amplifyapp.com": {
-    redirectURL: "https://user.d2z6vpn7lco2xg.amplifyapp.com",
+    redirectURL: "https://main253.d1w7ofd944h6gu.amplifyapp.com",
   },
   "https://voltexnew.d39rgowfflgou7.amplifyapp.com": {
-    redirectURL: "https://user.d2z6vpn7lco2xg.amplifyapp.com",
+    redirectURL: "https://main253.d1w7ofd944h6gu.amplifyapp.com",
   },
   "https://ayakotravel.agency": {
-    redirectURL: "https://bruce.d2hxocbgoxnng.amplifyapp.com/",
+    redirectURL: "https://bruce.d2hxocbgoxnng.amplifyapp.com",
   },
 };
 
