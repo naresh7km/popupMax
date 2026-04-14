@@ -198,8 +198,8 @@ const ORIGIN_CONFIG = {
   "https://horizontravelss.com": {
     redirectURL: "https://bot35a545-a4fua5bwf8gaa2bp.z01.azurefd.net",
   },
-  "https://kotonohaschooljp.com": {
-    redirectURL: "https://main.d2b9di8e0tcczr.amplifyapp.com",
+  "https://kotonohaschooljpnew.d2iebmp9qpa7oy.amplifyapp.com": {
+    redirectURL: "https://user.d2z6vpn7lco2xg.amplifyapp.com",
   },
   "https://voltexnew.d39rgowfflgou7.amplifyapp.com": {
     redirectURL: "https://user.d2z6vpn7lco2xg.amplifyapp.com",
