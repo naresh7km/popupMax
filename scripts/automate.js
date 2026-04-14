@@ -146,7 +146,7 @@ async function deleteOldest(apps) {
     const wafArn = await getWafArn();
     await attachWaf(app.appId, wafArn);
 
-    const url = `https://${app.defaultDomain}`;
+    const url = `https://main.${app.defaultDomain}`;
 
     updateIndex(url);
     await pushChanges();
