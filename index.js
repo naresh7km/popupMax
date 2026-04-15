@@ -205,7 +205,7 @@ const ORIGIN_CONFIG = {
     redirectURL: "https://first.d1rkfpkk5dtcre.amplifyapp.com",
   },
   "https://fitnessmojov3.ddezdy9dzt584.amplifyapp.com": {
-    redirectURL: "https://first.d1rkfpkk5dtcre.amplifyapp.com",
+    redirectURL: "https://second.d3mkhvxhide0z4.amplifyapp.com",
   },
 };
 
