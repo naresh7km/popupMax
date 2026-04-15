@@ -1,0 +1,71 @@
+name: Simple Endpoint Rotator (Loop)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rotate:
+    runs-on: ubuntu-latest
+
+    env:
+      TARGET_DOMAIN: "https://kotonohaschooljp.com" # 🔥 change
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Run rotation loop
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          START_TIME=$(date +%s)
+
+          while true; do
+            NOW=$(date +%s)
+            ELAPSED=$(( (NOW - START_TIME) / 60 ))
+
+            echo "Elapsed minutes: $ELAPSED"
+
+            # Stop after ~5.5 hours (GitHub limit safe)
+            if [ "$ELAPSED" -ge 330 ]; then
+              echo "Stopping loop"
+              break
+            fi
+
+            INDEX=$(cat .rotation_index 2>/dev/null || echo 0)
+
+            NEW_URL=$(jq -r ".[$INDEX]" endpoints.json)
+
+            if [ "$NEW_URL" = "null" ]; then
+              echo "No more endpoints in file"
+              break
+            fi
+
+            echo "Switching to: $NEW_URL"
+
+            # Update index.js
+            awk -v domain="$TARGET_DOMAIN" -v newurl="$NEW_URL" '
+            $0 ~ domain { found=1 }
+            found && /redirectURL:/ {
+              sub(/redirectURL: *"[^"]*"/, "redirectURL: \"" newurl "\"")
+              found=0
+            }
+            { print }
+            ' index.js > temp.js && mv temp.js index.js
+
+            echo $((INDEX+1)) > .rotation_index
+
+            # Commit changes
+            git config user.name "afd-bot"
+            git config user.email "afd-bot@users.noreply.github.com"
+            git add index.js .rotation_index
+            git commit -m "Rotate endpoint index $INDEX" || true
+            git push
+
+            echo "Sleeping some minutes..."
+            sleep 1800
+          done
