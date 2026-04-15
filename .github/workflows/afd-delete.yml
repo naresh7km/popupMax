@@ -30,7 +30,7 @@ jobs:
 
           RG="${{ vars.RG_NAME }}"
           PROFILE="${{ vars.AFD_PROFILE_NAME }}"
-          SECURITY_POLICY_NAME="GateGuardSecurity"  # 🔥 PUT YOUR POLICY NAME
+          SECURITY_POLICY_NAME="GateGuardSecurity"
 
           echo "Fetching endpoints created by GitHub..."
 
@@ -45,43 +45,74 @@ jobs:
             exit 0
           fi
 
-          # 🔥 Get current domains list once
-          CURRENT_DOMAINS=$(az afd security-policy show \
-            --resource-group "$RG" \
-            --profile-name "$PROFILE" \
-            --security-policy-name "$SECURITY_POLICY_NAME" \
-            --query "parameters.wafPolicy.domains[].id" \
-            -o tsv)
+          # ------------------------------------------------
+          # ✅ FIXED WAF DETACH LOGIC (ARRAY SAFE)
+          # ------------------------------------------------
+          echo "Fetching current WAF domains..."
 
-          UPDATED_DOMAINS="$CURRENT_DOMAINS"
-
-          for EP in $ENDPOINTS; do
-            echo "Processing endpoint: $EP"
-
-            EP_ID=$(az afd endpoint show \
+          mapfile -t CURRENT_ARRAY < <(
+            az afd security-policy show \
               --resource-group "$RG" \
               --profile-name "$PROFILE" \
-              --endpoint-name "$EP" \
-              --query id -o tsv)
+              --security-policy-name "$SECURITY_POLICY_NAME" \
+              --query "parameters.wafPolicy.domains[].id" \
+              -o tsv
+          )
 
-            # Remove this endpoint from domains list
-            UPDATED_DOMAINS=$(echo "$UPDATED_DOMAINS" | grep -v "$EP_ID" || true)
+          echo "Fetching bot endpoint IDs..."
+
+          mapfile -t BOT_ARRAY < <(
+            az afd endpoint list \
+              --resource-group "$RG" \
+              --profile-name "$PROFILE" \
+              --query "[?tags.\"created-by\"=='github-actions'].id" \
+              -o tsv
+          )
+
+          echo "Filtering domains (removing bot endpoints)..."
+
+          CLEANED=()
+
+          for DOMAIN in "${CURRENT_ARRAY[@]}"; do
+            SKIP=false
+            for BOT in "${BOT_ARRAY[@]}"; do
+              if [[ "$DOMAIN" == "$BOT" ]]; then
+                SKIP=true
+                break
+              fi
+            done
+
+            if [ "$SKIP" = false ]; then
+              CLEANED+=("$DOMAIN")
+            fi
           done
 
-          # 🔥 Update WAF once (clean list)
-          if [ -n "$UPDATED_DOMAINS" ]; then
-            echo "Updating WAF policy (detaching endpoints)..."
+          echo "Final domains after cleanup:"
+          printf "%s\n" "${CLEANED[@]}"
 
+          echo "Updating WAF policy..."
+
+          if [ ${#CLEANED[@]} -gt 0 ]; then
             az afd security-policy update \
               --resource-group "$RG" \
               --profile-name "$PROFILE" \
               --security-policy-name "$SECURITY_POLICY_NAME" \
-              --domains $UPDATED_DOMAINS
+              --domains "${CLEANED[@]}"
           else
-            echo "No domains left after cleanup"
+            echo "No domains left → setting empty list"
+            az afd security-policy update \
+              --resource-group "$RG" \
+              --profile-name "$PROFILE" \
+              --security-policy-name "$SECURITY_POLICY_NAME" \
+              --domains ""
           fi
 
-          # 🔥 Now delete endpoints
+          # ------------------------------------------------
+          # DELETE ENDPOINTS
+          # ------------------------------------------------
+          echo "Waiting for WAF detach to propagate..."
+          sleep 20
+
           for EP in $ENDPOINTS; do
             echo "Deleting endpoint: $EP"
 
