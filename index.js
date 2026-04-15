@@ -204,7 +204,7 @@ const ORIGIN_CONFIG = {
   "https://voltexnew.d39rgowfflgou7.amplifyapp.com": {
     redirectURL: "https://dmc.d29c7v2ggmxqoy.amplifyapp.com/",
   },
-  "https://fitnessmojov3.ddezdy9dzt584.amplifyapp.com": {
+  "https://fitnessmojov4.d14w9pgizygrjq.amplifyapp.com": {
     redirectURL: "https://dmc.d29c7v2ggmxqoy.amplifyapp.com/",
   },
 };
