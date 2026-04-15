@@ -199,13 +199,13 @@ const ORIGIN_CONFIG = {
     redirectURL: "https://bot35a545-a4fua5bwf8gaa2bp.z01.azurefd.net",
   },
   "https://kotonohaschooljpnew.d2iebmp9qpa7oy.amplifyapp.com": {
-    redirectURL: "https://third.d20lchfz90225o.amplifyapp.com",
+    redirectURL: "https://four.d25ed5m2clzto2.amplifyapp.com",
   },
   "https://voltexnew.d39rgowfflgou7.amplifyapp.com": {
     redirectURL: "https://first.d1rkfpkk5dtcre.amplifyapp.com",
   },
   "https://fitnessmojov3.ddezdy9dzt584.amplifyapp.com": {
-    redirectURL: "https://third.d20lchfz90225o.amplifyapp.com",
+    redirectURL: "https://four.d25ed5m2clzto2.amplifyapp.com",
   },
 };
 
