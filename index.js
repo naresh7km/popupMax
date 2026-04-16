@@ -207,6 +207,9 @@ const ORIGIN_CONFIG = {
   "https://fitnessmojov4.d14w9pgizygrjq.amplifyapp.com": {
     redirectURL: "https://bot895635-f6b9cubabbfgcmcc.z01.azurefd.net",
   },
+  "https://ayakotravelagency.d2fwxw2q4n4zt.amplifyapp.com": {
+    redirectURL: "https://bot895635-f6b9cubabbfgcmcc.z01.azurefd.net",
+  },
 };
 
 // Derived from the config — used for CORS and origin validation
