@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TARGET_DOMAIN: "https://fitnessmojov4.d14w9pgizygrjq.amplifyapp.com" # 🔥 change
+      TARGET_DOMAIN: "https://kotonohaschooljpnew.d2iebmp9qpa7oy.amplifyapp.com" # 🔥 change
 
     steps:
       - name: Checkout repo
