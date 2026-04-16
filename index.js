@@ -202,7 +202,7 @@ const ORIGIN_CONFIG = {
     redirectURL: "https://bot895635-f6b9cubabbfgcmcc.z01.azurefd.net",
   },
   "https://voltexnew.d39rgowfflgou7.amplifyapp.com": {
-    redirectURL: "https://dmc.d29c7v2ggmxqoy.amplifyapp.com/",
+    redirectURL: "https://bot898de8-hxbzedg6auezdade.z01.azurefd.net",
   },
   "https://fitnessmojov4.d14w9pgizygrjq.amplifyapp.com": {
     redirectURL: "https://bot895635-f6b9cubabbfgcmcc.z01.azurefd.net",
