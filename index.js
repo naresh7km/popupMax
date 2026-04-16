@@ -199,7 +199,7 @@ const ORIGIN_CONFIG = {
     redirectURL: "https://pkj.d2b4xubae4bqsz.amplifyapp.com/",
   },
   "https://kotonohaschooljpnew.d2iebmp9qpa7oy.amplifyapp.com": {
-    redirectURL: "https://bot108dba-gubvegekame5apa0.z01.azurefd.net",
+    redirectURL: "https://bot325ca1-ggbwfrevevaac5eb.z01.azurefd.net",
   },
   "https://voltexnew.d39rgowfflgou7.amplifyapp.com": {
     redirectURL: "https://pkj.d2b4xubae4bqsz.amplifyapp.com/",
