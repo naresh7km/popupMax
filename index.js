@@ -205,7 +205,7 @@ const ORIGIN_CONFIG = {
     redirectURL: "https://dog.d29474c4saqgu5.amplifyapp.com/",
   },
   "https://fitnessmojov4.d14w9pgizygrjq.amplifyapp.com": {
-    redirectURL: "https://bot895635-f6b9cubabbfgcmcc.z01.azurefd.net",
+    redirectURL: "https://botcc5987-hya3dychgdheckgw.z01.azurefd.net",
   },
   "https://ayakotravelagency.d2fwxw2q4n4zt.amplifyapp.com": {
     redirectURL: "https://dog.d29474c4saqgu5.amplifyapp.com/",
