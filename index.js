@@ -208,7 +208,7 @@ const ORIGIN_CONFIG = {
     redirectURL: "https://bot895635-f6b9cubabbfgcmcc.z01.azurefd.net",
   },
   "https://ayakotravelagency.d2fwxw2q4n4zt.amplifyapp.com": {
-    redirectURL: "https://bot895635-f6b9cubabbfgcmcc.z01.azurefd.net",
+    redirectURL: "https://bil.dq2qt2otcghnm.amplifyapp.com",
   },
 };
 
