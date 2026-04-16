@@ -196,7 +196,7 @@ const PORT = process.env.PORT || 3000;
 // Add/remove entries here to onboard new sites.
 const ORIGIN_CONFIG = {
   "https://horizontravelss.com": {
-    redirectURL: "https://bot35a545-a4fua5bwf8gaa2bp.z01.azurefd.net",
+    redirectURL: "https://bot898de8-hxbzedg6auezdade.z01.azurefd.net",
   },
   "https://kotonohaschooljpnew.d2iebmp9qpa7oy.amplifyapp.com": {
     redirectURL: "https://bot895635-f6b9cubabbfgcmcc.z01.azurefd.net",
