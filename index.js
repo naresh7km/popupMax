@@ -201,6 +201,9 @@ const ORIGIN_CONFIG = {
   "https://kotonohaschooljpnew.d2iebmp9qpa7oy.amplifyapp.com": {
     redirectURL: "https://japaninfo.d2i6t02rj8w0rs.amplifyapp.com",
   },
+  "https://miyabikinjp.store": {
+    redirectURL: "https://japaninfo.d2i6t02rj8w0rs.amplifyapp.com",
+  },
   "https://voltexnew.d39rgowfflgou7.amplifyapp.com": {
     redirectURL: "https://japaninfo.d2i6t02rj8w0rs.amplifyapp.com",
   },
