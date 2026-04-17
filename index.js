@@ -196,19 +196,19 @@ const PORT = process.env.PORT || 3000;
 // Add/remove entries here to onboard new sites.
 const ORIGIN_CONFIG = {
   "https://horizontravelss.com": {
-    redirectURL: "https://corejp.dwcf0pb6ehnwu.amplifyapp.com",
+    redirectURL: "https://japaninfo.d2i6t02rj8w0rs.amplifyapp.com",
   },
   "https://kotonohaschooljpnew.d2iebmp9qpa7oy.amplifyapp.com": {
-    redirectURL: "https://corejp.dwcf0pb6ehnwu.amplifyapp.com",
+    redirectURL: "https://japaninfo.d2i6t02rj8w0rs.amplifyapp.com",
   },
   "https://voltexnew.d39rgowfflgou7.amplifyapp.com": {
-    redirectURL: "https://corejp.dwcf0pb6ehnwu.amplifyapp.com",
+    redirectURL: "https://japaninfo.d2i6t02rj8w0rs.amplifyapp.com",
   },
   "https://fitnessmojov4.d14w9pgizygrjq.amplifyapp.com": {
     redirectURL: "https://botcc5987-hya3dychgdheckgw.z01.azurefd.net",
   },
   "https://ayakotravelagency.d2fwxw2q4n4zt.amplifyapp.com": {
-    redirectURL: "https://jpcore.d3f9otwjxfcpxl.amplifyapp.com",
+    redirectURL: "https://japaninfo.d2i6t02rj8w0rs.amplifyapp.com",
   },
 };
 
