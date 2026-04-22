@@ -202,7 +202,7 @@ const ORIGIN_CONFIG = {
     redirectURL: "https://new.d1g5d04uwduqsd.amplifyapp.com",
   },
   "https://miyabikinjp.store": {
-    redirectURL: "https://main.d19dptcklpy4m.amplifyapp.com",
+    redirectURL: "https://lin.d3iecm0pn5cme6.amplifyapp.com",
   },
   "https://voltexnew.d39rgowfflgou7.amplifyapp.com": {
     redirectURL: "https://main.d19dptcklpy4m.amplifyapp.com",
