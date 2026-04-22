@@ -199,7 +199,7 @@ const ORIGIN_CONFIG = {
     redirectURL: "https://main.d19dptcklpy4m.amplifyapp.com",
   },
   "https://kotonohaschooljpnew.d2iebmp9qpa7oy.amplifyapp.com": {
-    redirectURL: "https://test3.dat0evu7jejp5.amplifyapp.com",
+    redirectURL: "https://main.d1x4wn8b7ppcd6.amplifyapp.com",
   },
   "https://miyabikinjp.store": {
     redirectURL: "https://main.d19dptcklpy4m.amplifyapp.com",
