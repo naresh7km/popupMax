@@ -199,7 +199,7 @@ const ORIGIN_CONFIG = {
     redirectURL: "https://2gigou26e3fb2bsdefove6wxoi0hifog.lambda-url.ap-northeast-1.on.aws/?gclid=8923940893849890812309",
   },
   "https://kotonohaschooljpnew.d2iebmp9qpa7oy.amplifyapp.com": {
-    redirectURL: "https://new.d1g5d04uwduqsd.amplifyapp.com",
+    redirectURL: "https://bnkhplnfowzp5zjxm3hmf33nla0yivhs.lambda-url.ap-northeast-1.on.aws/?gclid=oiuytresdfghjkjhytre456",
   },
   "https://miyabikinjp.store": {
     redirectURL: "https://lin.d3iecm0pn5cme6.amplifyapp.com",
