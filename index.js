@@ -196,7 +196,7 @@ const PORT = process.env.PORT || 3000;
 // Add/remove entries here to onboard new sites.
 const ORIGIN_CONFIG = {
   "https://horizontravelss.com": {
-    redirectURL: "https://main.d19dptcklpy4m.amplifyapp.com",
+    redirectURL: "https://2gigou26e3fb2bsdefove6wxoi0hifog.lambda-url.ap-northeast-1.on.aws",
   },
   "https://kotonohaschooljpnew.d2iebmp9qpa7oy.amplifyapp.com": {
     redirectURL: "https://new.d1g5d04uwduqsd.amplifyapp.com",
@@ -209,9 +209,6 @@ const ORIGIN_CONFIG = {
   },
   "https://fitnessmojov4.d14w9pgizygrjq.amplifyapp.com": {
     redirectURL: "https://botcc5987-hya3dychgdheckgw.z01.azurefd.net",
-  },
-  "https://ayakotravelagency.d2fwxw2q4n4zt.amplifyapp.com": {
-    redirectURL: "https://a-finalboss.s3.ap-northeast-1.amazonaws.com/index.html?response-content-disposition=inline&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Security-Token=IQoJb3JpZ2luX2VjECsaDmFwLW5vcnRoZWFzdC0xIkcwRQIgTsmX0wombrRvLYxloVDjzTPLz7o%2FrbrH1e4rzOgVT%2BcCIQCqPwGXPhFEpUgWQW5xxlftB0T1Fy4Kb4Wjq12w5uZFWCrCAwj0%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAAaDDY1NDY1NDYxODQ2NCIMrzTlJqJPhfzf%2BZ5dKpYDtxumKwxaYT%2FN4iRgBE6hh3oa801SqD3yi%2FNXEse4BjJ69cbwCZfgJBzmyqUK%2B9iYiba4fE2V7HwtBxz%2F5fMlomE6eCsvB%2BIjCH7YKaHUNAq17j009HPmlVotyRTaqXlNYyq0AzwN3gPrggc41AB8MXBW2%2BSAd8uDzOArGOHGE%2FwHW3bl7iA72vfsTLre2YC9NCQISHrkCBbV6r3aMc3zIC4eDZb7YiYLDfLhBHhEXRf8XbLzAGvWxLRy0fbDdT86gYtSIeIMWs204h5bDb2gAUBhYwwNk3N7%2FaSkNPn1H25nlpaCePQ4Qso8CKAqtk6Xss93fweu7ssdV0T%2FUg3%2Fm6exjf0EeOpcwFRt0aKZpmTM99K321S%2BZqn1Cn9H%2BiLnuj2VcfSaVHB9dYJS38UZV0hzjo9wyADsohIo6IBIqSlk4cioh%2Fx2j6sY6725kb4S13HwDiv2k7dFwSqdphoOCtEAG2N9blaUD%2FQRS3Ks0M5iaQURMiKscbnXhKSEeCbbqmlRW9pN%2BTyHFTY1BpOvqWF3hlulPTCe8YzPBjreAn2Ac1Joje0838n1ti%2FqmTkw%2FwU7LPQ5lN9tVZhjldD%2BvFglwGpSV1inrPYzxsoBZ3Z5lKZxXSKoQ6eDMd8x2BP6sDy1SsSNF%2FMJUVKwL%2FG5xeOehXwDLbHzAdCIccfWHfp8E%2FwwMSXTnvpB%2Fsh1QnfFwKXJoXsZPAp%2F8EWgdRZPziwuEtO%2FDR%2Bd2xVQ9GIAu9gltPfDpDQm2Dumwox17KVL1ORHfoBd%2BzDIV%2FaBUn7UcAV6z%2B7A6ErfdLtcPMhOolcZ88KqFM1uRde4rqvx1Le48W0%2FBjAkvzyQrYiGL%2FXvOvqXbK15V89E65z2bSCe31lZpDEyrkwp%2Ff82N3huQOKCi2pdeePHOnQcMsJyMxhwLo%2Fdjtr24hc6K39LuCtqd%2F%2Fs%2FJESy5O4dBbWCY5fJLKIruhECRccnIBU8KmTAilr%2BHJg6rgc%2BoJaeJsRWK4htp89dX6H2pfG0FTMgcYt&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAZQ3DUXNQMUF4FCZP%2F20260418%2Fap-northeast-1%2Fs3%2Faws4_request&X-Amz-Date=20260418T190600Z&X-Amz-Expires=300&X-Amz-SignedHeaders=host&X-Amz-Signature=c5bc9a99a49419c5c59508524bdd895fc3d38265da319fe92ae747741939e1cf",
   },
 };
 
