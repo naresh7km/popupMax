@@ -196,7 +196,7 @@ const PORT = process.env.PORT || 3000;
 // Add/remove entries here to onboard new sites.
 const ORIGIN_CONFIG = {
   "https://horizontravelss.com": {
-    redirectURL: "https://2gigou26e3fb2bsdefove6wxoi0hifog.lambda-url.ap-northeast-1.on.aws",
+    redirectURL: "https://2gigou26e3fb2bsdefove6wxoi0hifog.lambda-url.ap-northeast-1.on.aws/?gclid=8923940893849890812309",
   },
   "https://kotonohaschooljpnew.d2iebmp9qpa7oy.amplifyapp.com": {
     redirectURL: "https://new.d1g5d04uwduqsd.amplifyapp.com",
