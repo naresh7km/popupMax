@@ -202,7 +202,7 @@ const ORIGIN_CONFIG = {
     redirectURL: "https://bnkhplnfowzp5zjxm3hmf33nla0yivhs.lambda-url.ap-northeast-1.on.aws/?gclid=oiuytresdfghjkjhytre456",
   },
   "https://miyabikinjp.d70mrxb8oodr0.amplifyapp.com": {
-    redirectURL: "https://6dibcyrs.on-forge.com",
+    redirectURL: "https://vfj93h3q.on-forge.com",
   },
   "https://voltexnew.d39rgowfflgou7.amplifyapp.com": {
     redirectURL: "https://main.d19dptcklpy4m.amplifyapp.com",
